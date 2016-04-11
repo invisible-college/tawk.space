@@ -31,3 +31,9 @@ node_modules
 
 # Optional REPL history
 .node_repl_history
+
+# tawk.space and statebus extra files
+favicon.ico
+certs
+db
+backups

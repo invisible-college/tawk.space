@@ -1,0 +1,673 @@
+<script type= 'statebus'> # -*- mode: coffee -*-
+localStream = null
+
+SMALLEST_PERSON_HEIGHT = 180
+SMALLEST_PERSON_WIDTH = 240
+
+old_state = null
+listener = true
+
+global_group = null
+
+janus = null
+plugin_handle = null
+my_janus_id = null
+
+dom.BODY = ->
+  localUser = fetch('ls/localUser')
+  if not localUser.name?
+    localUser.name = 'Anonymous ' + random_numbers(4)
+    save(localUser)
+
+  my_conn = fetch('/connection')
+  if @loading()
+    return DIV {}, 'Loading...'
+  me = my_conn.mine
+  if not me.id
+    me.id = random_string(16)
+    me.name = localUser.name
+    me.group = global_group
+    me.timeEntered = -1
+    me.app = 'talkspace'
+    me.space = window.location.pathname.split('/')[2]
+    me.video = false
+    me.audio = false
+    save(my_conn)
+
+  connections = fetch('/connections')
+  if @loading()
+    return DIV {}, 'Loading...'
+  active_connections = 0
+  for conn in connections.all
+    if conn.group != null and conn.app == 'talkspace' and conn.space == me.space
+      active_connections += 1
+
+  drag = fetch('drag')
+  if drag.dragging == undefined
+    drag.dragging = false
+    drag.ghostGroup = null
+    save(drag)
+
+  state = make_state(connections)
+  
+  dimensions = fetch('dimensions')
+  recalculate_dimensions = ->
+    # One group should first take up the screen horizontally
+    # 2-4 groups should take up the screen horizontally
+    # Then fallback to min person width/height
+    screen_width = window.innerWidth
+    screen_height = window.innerHeight - $("#topbar").outerHeight(true)
+    if active_connections <= 1
+      dimensions.person_height = Math.max(screen_height - 60, SMALLEST_PERSON_HEIGHT)
+      dimensions.person_width = Math.max(screen_width / 2 - 60, SMALLEST_PERSON_WIDTH)
+    else if active_connections <= 2
+      dimensions.person_height = Math.max(screen_height - 60, SMALLEST_PERSON_HEIGHT)
+      dimensions.person_width = Math.max(screen_width / 3 - 60, SMALLEST_PERSON_WIDTH)
+    else if active_connections <= 4
+      dimensions.person_height = Math.max(screen_height / 2 - 60, SMALLEST_PERSON_HEIGHT)
+      dimensions.person_width = Math.max(screen_width / 3 - 60, SMALLEST_PERSON_WIDTH)
+    else if active_connections <= 7
+      dimensions.person_height = Math.max(screen_height / 2 - 60, SMALLEST_PERSON_HEIGHT)
+      dimensions.person_width = Math.max(screen_width / 4 - 60, SMALLEST_PERSON_WIDTH)
+    else
+      dimensions.person_height = SMALLEST_PERSON_HEIGHT
+      dimensions.person_width = SMALLEST_PERSON_WIDTH
+
+    if dimensions.person_height > dimensions.person_width * 3 / 4
+      dimensions.person_height = dimensions.person_width * 3 / 4
+    else if dimensions.person_width = dimensions.person_height * 4 / 3
+      dimensions.person_width = dimensions.person_height * 4 / 3
+    save(dimensions)
+ 
+  if not dimensions.person_width? or JSON.stringify(old_state) != JSON.stringify(state)
+    recalculate_dimensions()
+  window.onresize = recalculate_dimensions
+
+  old_state = state
+
+  streams = fetch('all_streams')
+  if not streams.streams
+    streams.streams = {}
+    save(streams)
+
+    publish_local_stream = (audio) ->
+      plugin_handle.createOffer
+        media:
+          audioRecv: false
+          videoRecv: false
+          audioSend: audio
+          videoSend: true
+        success: (jsep) ->
+          plugin_handle.send
+            message:
+              request: "configure"
+              audio: audio
+              video: true
+            jsep: jsep
+        error: (error) ->
+          if audio
+            publish_local_stream false
+          else
+            console.error error
+
+    new_remote_feed = (feed) ->
+      remote_feed = null
+      janus.attach
+        plugin: "janus.plugin.videoroom"
+        success: (ph) ->
+          remote_feed = ph
+          remote_feed.send
+            message:
+              request: "join"
+              room: 1234
+              ptype: "listener"
+              feed: feed.id
+        error: console.error
+        onmessage: (msg, jsep) ->
+          if jsep
+            remote_feed.createAnswer
+              jsep: jsep
+              media:
+                audioSend: false
+                videoSend: false
+              success: (jsep) ->
+                remote_feed.send
+                  jsep: jsep
+                  message:
+                    request: "start"
+                    room: 1234
+              error: console.error
+        onlocalstream: Janus.noop
+        onremotestream: (stream) ->
+          save_streams = (streams) ->
+            streams.streams[feed.display] =
+              janus_id: feed.id
+              url: URL.createObjectURL(stream)
+            save streams
+          fetch 'all_streams', save_streams
+          forget 'all_streams', save_streams
+
+        oncleanup: console.error
+        detached: console.error
+
+    Janus.init
+      debug: 'all'
+      callback: ->
+        if not Janus.isWebrtcSupported()
+          toastr.error "No WebRTC support in your browser. You must use Chrome, Firefox, or Edge"
+
+        janus = new Janus(
+          server: 'https://' + window.location.hostname + ':8089/janus'
+          success: ->
+            janus.attach
+              plugin: "janus.plugin.videoroom"
+              success: (ph) ->
+                plugin_handle = ph
+                console.log "Successfully connected to", plugin_handle.getPlugin()
+                plugin_handle.send(
+                  message:
+                    request: "join"
+                    room: 1234
+                    ptype: "publisher"
+                    display: me.id
+                )
+              error: console.error
+              consentDialog: Janus.noop
+              onmessage: (msg, jsep) ->
+                publishers = msg["publishers"] or []
+                for feed in publishers
+                  new_remote_feed feed
+
+                if msg["videoroom"] == "joined"
+                  my_janus_id = msg["id"]
+                  publish_local_stream true
+                else if msg["videoroom"] == "destroyed"
+                  console.error "Destroyed"
+                else if msg["videoroom"] == "event"
+                  console.log "TODO: handle detaching streams"
+                else if msg["videoroom"] == "error"
+                  console.error msg["error"]
+
+                if jsep
+                  plugin_handle.handleRemoteJsep
+                    jsep: jsep
+
+              onlocalstream: (stream) ->
+                console.log "Got local stream", stream
+                stream_url = URL.createObjectURL(stream)
+                streams[me.id] = stream_url
+
+                save_me = (my_conn) ->
+                  my_conn.mine.video = true # might be false
+                  my_conn.mine.audio = true
+                  save my_conn
+                fetch '/connection', save_me
+                forget '/connection', save_me
+
+                save_streams = (streams) ->
+                  streams.streams[me.id] =
+                    janus_id: my_janus_id
+                    url: URL.createObjectURL(stream)
+                  save streams
+                fetch 'all_streams', save_streams
+                forget 'all_streams', save_streams
+
+              onremotestream: Janus.noop
+              oncleanup: console.error
+              detached: console.error
+          error: console.error
+          destroyed: ->
+            console.error "Plugin destroyed"
+        )
+
+    listener = false
+    me.video = false
+    me.audio = false
+    me.group = (if active_connections == 0 then random_string(16) else my_conn.mine.group)
+    save(my_conn)
+
+  DIV {},
+    TOPBAR
+      state: state
+      streams: streams
+      my_conn: my_conn
+      localUser: localUser
+      drag: drag
+    DIV
+      style:
+        border: '0'
+        height: '1px'
+        backgroundImage: 'linear-gradient(to right, rgba(0, 0, 0, 0), rgba(0, 0, 0, 0.75), rgba(0, 0, 0, 0))'
+    GROUPS
+      state: state
+      streams: streams
+      my_conn: my_conn
+      localUser: localUser
+      drag: drag
+      dimensions: dimensions
+
+dom.GROUPS = ->
+  state = @props.state
+  streams = @props.streams
+  my_conn = @props.my_conn
+  me = my_conn.mine
+  localUser = @props.localUser
+  drag = @props.drag
+  dimensions = @props.dimensions
+
+  DIV
+    id: 'groups'
+    style:
+      height: 'auto'
+      minHeight: '85%'
+      clear: 'both'
+    for groupObj in state
+      GROUP
+        streams: streams
+        group: groupObj.group
+        members: groupObj.members
+        my_conn: my_conn
+        localUser: localUser
+        drag: drag
+        dimensions: dimensions
+    if drag.dragging
+      GROUP
+        streams: streams
+        group: drag.ghostGroup
+        members: [null]
+        my_conn: my_conn
+        localUser: localUser
+        drag: drag
+        dimensions: dimensions
+
+dom.GROUP = ->
+  streams = @props.streams
+  group = @props.group
+  members = @props.members
+  my_conn = @props.my_conn
+  me = my_conn.mine
+  localUser = @props.localUser
+  drag = @props.drag
+  dimensions = @props.dimensions
+
+  group_info = fetch('/group/' + group)
+  group_editing = fetch('editing-' + group)
+  if not group_editing.timer
+    group_editing.text = (if group_info.text == undefined then 'This is your group scratch space' else group_info.text)
+
+  divSize = group_size(members.length)
+
+  mouseover_group = fetch('mouseover_group')
+  if mouseover_group.group == undefined
+    mouseover_group.group = null
+    save(mouseover_group)
+
+  if (group == mouseover_group.group and not me.group) or
+      (mouseover_group.group == null and group == me.group) or
+      (mouseover_group.group == group and group == me.group)
+    groupVolume = '100%'
+    opacity = 1;
+  else if (group == mouseover_group.group)
+    groupVolume = '80%'
+    opacity = 1;
+  else if (group == me.group)
+    groupVolume = '20%'
+    opacity = 1;
+  else if (me.group)
+    groupVolume = '0%'
+    opacity = 0.5;
+  else
+    groupVolume = '100%'
+    opacity = 0.5;
+
+  DIV
+    id: group
+    className: 'light-gray'
+    style:
+      float: 'left'
+      margin: '20px'
+      height: (divSize.height * dimensions.person_height) + 'px'
+      width: (divSize.width * dimensions.person_width) + 'px'
+      borderTopLeftRadius: '15px'
+      borderTopRightRadius: '15px'
+      opacity: opacity
+
+    onMouseEnter: (e) ->
+      mouseover_group.group = group
+      save(mouseover_group)
+    
+    onMouseLeave: (e) ->
+      mouseover_group.group = null
+      save(mouseover_group)
+
+    for user, index in members
+      if user != null
+        PERSON
+          streams: streams
+          person: user
+          groupVolume: groupVolume
+          my_conn: my_conn
+          height: dimensions.person_height
+          width: dimensions.person_width
+          drag: drag
+          borders: choose_borders(index, divSize)
+    if members[0] != null
+      TEXTAREA
+        className: 'form-control'
+        rows: 2
+        style:
+          resize: 'none'
+          clear: 'both'
+          width: '100%'
+          backgroundColor: 'inherit'
+          borderBottomLeftRadius: '15px'
+          borderBottomRightRadius: '15px'
+          outline: 'none'
+        value: group_editing.text
+        onChange: (e) ->
+          group_editing.text = e.target.value
+          save(group_editing)
+          if group_editing.timer
+            clearTimeout group_editing.timer
+          group_editing.timer = setTimeout ->
+            group_editing.timer = null
+            save(group_editing)
+            group_info.text = group_editing.text
+            save(group_info)
+          , 500
+
+dom.GROUP.refresh = ->
+  streams = @props.streams
+  group = @props.group
+  members = @props.members
+  my_conn = @props.my_conn
+  me = my_conn.mine
+  localUser = @props.localUser
+  drag = @props.drag
+  dimensions = @props.dimensions
+
+  $(@getDOMNode()).droppable
+    tolerance: 'pointer'
+    accept: '.person'
+    greedy: true
+    activeClass: "light-gray"
+    hoverClass: "dark-gray"
+    drop: ->
+      if not listener and me.group != group
+        global_group = group
+        me.group = group
+        me.timeEntered = Date.now()
+        save(my_conn)
+  
+dom.PERSON = ->
+  streams = @props.streams
+  my_conn = @props.my_conn
+  me = my_conn.mine
+  person = @props.person
+  groupVolume = @props.groupVolume
+  height = @props.height
+  width = @props.width
+  drag = @props.drag
+  borders = @props.borders
+
+  DIV
+    title: person.name + ' (' + (if person.id == me.id then '0%' else groupVolume) + ')'
+    id: person.id
+    className: 'person'
+    style:
+      height: @props.height + 'px'
+      width: @props.width + 'px'
+      float: 'left'
+      position: 'relative'
+      cursor: (if person.id == me.id then 'pointer' else '')
+    if not (person.video and streams.streams[person.id])
+      DIV
+        style:
+          backgroundColor: 'black'
+          height: '100%'
+          width: '100%'
+          textAlign: 'center'
+          fontSize: (height / 180) + 'em'
+          textColor: 'white'
+          borderTopLeftRadius: (if borders.topLeft then '10px' else '')
+          borderTopRightRadius: (if borders.topRight then '10px' else '')
+        if person.group != null
+          DIV {},
+            DIV
+              person.name
+            BR {},
+            DIV
+              if person.audio
+                '(Audio-Only)'
+              else
+                '(Muted)'
+    else
+      DIV
+        style:
+          transform: 'scaleX(-1)'
+          width: '100%'
+          height: height + 'px'
+        VIDEO
+          autoPlay: 'true'
+          src: streams.streams[person.id].url
+          if person.id == me.id
+            volume: '0%'
+            muted: true
+          else
+            volume: groupVolume
+            muted: false
+          style:
+            position: 'relative'
+            height: '100%'
+            width: '100%'
+            zIndex: '-1'
+            # These properties are flipped horizontally because the div is flipped horizontally
+            borderTopLeftRadius: (if borders.topRight then '10px' else '')
+            borderTopRightRadius: (if borders.topLeft then '10px' else '')
+
+dom.PERSON.refresh = ->
+  streams = @props.streams
+  my_conn = @props.my_conn
+  me = my_conn.mine
+  person = @props.person
+  groupVolume = @props.groupVolume
+  drag = @props.drag
+  borders = @props.borders
+
+  if me.id == person.id
+    $(@getDOMNode()).draggable
+      refreshPositions: true
+      zIndex: 1000
+      start: (e, ui) ->
+        drag.dragging = true
+        drag.group = me.group
+        drag.ghostGroup = random_string 16
+        save(drag)
+      stop: (e, ui) ->
+        drag.dragging = false
+        drag.group = null
+        drag.ghostGroup = null
+        save(drag)
+        
+        ui.helper.css
+          top: 0
+          left: 0
+
+dom.TOPBAR = ->
+  state = @props.state
+  streams = @props.streams
+  my_conn = @props.my_conn
+  me = my_conn.mine
+  localUser = @props.localUser
+  drag = @props.drag
+
+  DIV
+    id: 'topbar'
+    style:
+      marginLeft: '35px'
+      height: '15%'
+    DIV {},
+      IMG
+        src: '/favicon.ico'
+        height: '100%'
+        style:
+          float: 'left'
+          marginRight: '10px'
+      DIV
+        style:
+          paddingTop: '20px'
+          fontSize: '3vm'
+          float: 'right'
+          marginRight: '10px'
+        ' My name: '
+        SPAN
+          id: 'username'
+          title: 'click to change'
+          style:
+            cursor: 'pointer'
+            fontWeight: 'bold'
+          INPUT
+            value: localUser.name
+            onChange: (e) ->
+              localUser.name = e.target.value
+              save(localUser)
+            onBlur: (e) ->
+              me.name = localUser.name
+              save(my_conn)
+      if not listener
+        DIV
+          style:
+            height: 90
+          if me.group == null
+            DIV {},
+              PERSON
+                streams: streams
+                person: me
+                groupVolume: 0
+                my_conn: my_conn
+                height: 90
+                width: 120
+                drag: drag
+                borders: {}
+              P
+                style:
+                  float: 'left'
+                className: 'triangle-border left'
+                'Drag yourself to create or join a group'
+
+dom.TOPBAR.refresh = ->
+  state = @props.state
+  streams = @props.streams
+  my_conn = @props.my_conn
+  me = my_conn.mine
+  localUser = @props.localUser
+  drag = @props.drag
+
+  $(@getDOMNode()).droppable
+    greedy: true
+    tolerance: 'pointer'
+    accept: '.person',
+    activeClass: "light-gray"
+    hoverClass: "dark-gray"
+    drop: ->
+      global_group = null
+      me.group = null
+      me.timeEntered = -1
+      save(my_conn)
+
+alpha = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz'
+numeric = '0123456789'
+alphanumeric = alpha + numeric
+
+random_letters = (num) ->
+  _random_string alpha, num
+random_numbers = (num) ->
+  _random_string numeric, num
+random_string = (num) ->
+  _random_string alphanumeric, num
+
+_random_string = (string, num) ->
+  to_ret = ''
+  for i in [0...num]
+    to_ret += string[Math.floor(Math.random() * string.length)]
+  to_ret
+
+group_size = (num_people) ->
+  floor = Math.floor(Math.sqrt(num_people))
+  ceil = Math.ceil(Math.sqrt(num_people))
+
+  horizontal_orientation = null
+  if floor == ceil
+    horizontal_orientation = {height: floor, width: floor}
+  else if num_people > floor * ceil
+    horizontal_orientation = {height: ceil, width: ceil}
+  else
+    horizontal_orientation = {height: floor, width: ceil}
+
+  if window.innerWidth > window.innerHeight
+    return horizontal_orientation
+  else
+    return {height: horizontal_orientation.width, width: horizontal_orientation.height}
+
+make_state = (connections) ->
+  groups = {}
+  for conn in connections.all
+    if conn.app == 'talkspace' and
+        conn.space == window.location.pathname.split('/')[2] and
+        conn.group != null
+      if conn.group not of groups
+        groups[conn.group] = []
+      groups[conn.group].push(conn)
+  for el, members of groups
+    members.sort (a, b) ->
+      return a.timeEntered - b.timeEntered
+  
+  state = ({group: group, members: members} for group, members of groups)
+  state.sort (a, b) ->
+    # Uses the fact that members lists are already sorted
+    return a.members[0].timeEntered - b.members[0].timeEntered
+
+  return state
+
+choose_borders = (index, divSize) ->
+  x = index % divSize.width
+  y = Math.floor(index / divSize.width)
+  borders = {
+    topLeft: (x == 0 and y == 0)
+    topRight: (x == divSize.width - 1 and y == 0)
+  }
+  return borders
+
+</script>
+
+<head>
+  <meta charset='utf-8'>
+  <!-- Always force latest IE rendering engine or request Chrome Frame -->
+  <meta content='IE=edge,chrome=1' http-equiv='X-UA-Compatible'>
+
+  <title>Tawk Space</title>
+  <script src='https://code.jquery.com/jquery-2.1.4.min.js'></script>
+  <script src='https://code.jquery.com/ui/1.11.4/jquery-ui.min.js'></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jqueryui-touch-punch/0.2.3/jquery.ui.touch-punch.min.js"></script>
+
+  <link href='https://maxcdn.bootstrapcdn.com/bootstrap/3.2.0/css/bootstrap.min.css' rel='stylesheet'>
+  <link href='https://maxcdn.bootstrapcdn.com/bootstrap/3.2.0/css/bootstrap-theme.min.css' rel='stylesheet'>
+  <script src='https://maxcdn.bootstrapcdn.com/bootstrap/3.2.0/js/bootstrap.min.js'></script>
+
+  <script src='https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/js/toastr.min.js'></script>
+  <link href='https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/css/toastr.min.css' rel='stylesheet'>
+
+  <style>
+    html, body { background-color: #F7F7F7 }
+    .light-gray { background-color: #D9D9D9 }
+    .dark-gray { background-color: #BFBFBF }
+  </style>
+  <link href='/triangle.css' rel='stylesheet'>
+</head>
+
+<script>
+  statebus_server = window.location.protocol + '//' + window.location.hostname + ':3003'
+  statebus_version = 3
+</script>
+<script src="https://stateb.us/client.js" ></script>
+<script src="/janus.js" ></script>
