@@ -5,7 +5,7 @@
   "dependencies": {
     "body-parser": "^1.13.2",
     "express": "^4.3.1",
-    "statebus": "^3.0.25",
-    "sockjs": "^0.3.16"
+    "sockjs": "^0.3.16",
+    "statebus": "^3.0.25"
   }
 }
