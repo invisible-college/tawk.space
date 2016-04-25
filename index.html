@@ -305,19 +305,19 @@ dom.GROUP = ->
   if (group == mouseover_group.group and not me.group) or
       (mouseover_group.group == null and group == me.group) or
       (mouseover_group.group == group and group == me.group)
-    groupVolume = '100%'
+    groupVolume = 1.0
     opacity = 1;
   else if (group == mouseover_group.group)
-    groupVolume = '80%'
+    groupVolume = 0.8
     opacity = 1;
   else if (group == me.group)
-    groupVolume = '20%'
+    groupVolume = 0.2
     opacity = 1;
   else if (me.group)
-    groupVolume = '0%'
+    groupVolume = 0.0
     opacity = 0.5;
   else
-    groupVolume = '100%'
+    groupVolume = 1.0
     opacity = 0.5;
 
   DIV
@@ -410,7 +410,7 @@ dom.PERSON = ->
   borders = @props.borders
 
   DIV
-    title: person.name + ' (' + (if person.id == me.id then '0%' else groupVolume) + ')'
+    title: person.name
     id: person.id
     className: 'person'
     style:
@@ -449,12 +449,6 @@ dom.PERSON = ->
         VIDEO
           autoPlay: 'true'
           src: streams.streams[person.id].url
-          if person.id == me.id
-            volume: '0%'
-            muted: true
-          else
-            volume: groupVolume
-            muted: false
           style:
             position: 'relative'
             height: '100%'
@@ -472,6 +466,9 @@ dom.PERSON.refresh = ->
   groupVolume = @props.groupVolume
   drag = @props.drag
   borders = @props.borders
+
+  if person.video and streams.streams[person.id]
+    @getDOMNode().getElementsByTagName('video')[0].volume = (if person.id != me.id then groupVolume else 0)
 
   if me.id == person.id
     $(@getDOMNode()).draggable
