@@ -20,16 +20,42 @@ Tawk is mainly powered by two libraries:
 * Janus WebRTC Gateway: https://github.com/meetecho/janus-gateway
 
 ## Set up your own tawk instance
-Clone and set up the Janus WebRTC Gateway. You only need the video room plugin. Follow their documentation for detailed instructions and options. Here is what I use:
+Clone and set up the Janus WebRTC Gateway. You only need the video room plugin. Follow their documentation for detailed instructions and options. Here is what I did on Fedora:
+
+Download required packages:
+```bash
+sudo dnf -y install libmicrohttpd-devel jansson-devel libnice-devel \
+   openssl-devel libsrtp-devel sofia-sip-devel glib-devel \
+   opus-devel libogg-devel pkgconfig gengetopt libtool autoconf automake
+
+git clone https://github.com/sctplab/usrsctp
+cd usrsctp
+./bootstrap
+./configure --prefix=/usr && make && sudo make install
+cd ..
+```
+
+Download and compile Janus
 ```bash
 git clone git@github.com:meetecho/janus-gateway.git
 cd janus-gateway
+sh autogen.sh
 ./configure --prefix=/opt/janus --disable-websockets --disable-rabbitmq
 make
 sudo make install
+sudo make configs
 ```
 
-Follow the Janus documentation on setting up the https server (the default is http). At a minimum you will need to edit `/opt/janus/etc/janus/janus.transport.http.cfg`.
+Configure Janus for https--edit `/opt/janus/etc/janus/janus.transport.http.cfg`:
+* Under [general] set `http` to `no`
+* Set `https` to yes
+* Change the `secure_port` to `8089`
+* Under [certificates] set your public and private keys
+
+Run the Janus gateway (you might want to do this in `screen`):
+```bash
+sudo /opt/janus/bin/janus --interface=45.33.55.128 --cert-pem=/path/to/public.certificate --cert-key=/path/to/private.key --stun-server=stun.l.google.com:19302
+```
 
 In the same directory that you cloned janus-gateway, clone tawk.space and install dependencies
 ```bash
@@ -42,7 +68,7 @@ You must set up certs for https in a folder called `certs/` in the tawk.space re
 
 Note: If you want the tawk.space logo, download it at https://tawk.space/favicon.ico and put it in the tawk.space folder as `favicon.ico`. This avoids having to put images in the repository.
 
-Finally, run it!
+Finally, run it! Again, you might want to use `screen`.
 
 ```bash
 sudo node index
