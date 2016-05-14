@@ -501,14 +501,8 @@ dom.TOPBAR = ->
     id: 'topbar'
     style:
       marginLeft: '35px'
-      height: '15%'
+      height: '90px'
     DIV {},
-      IMG
-        src: '/favicon.ico'
-        height: '100%'
-        style:
-          float: 'left'
-          marginRight: '10px'
       DIV
         style:
           paddingTop: '20px'
@@ -530,26 +524,25 @@ dom.TOPBAR = ->
             onBlur: (e) ->
               me.name = localUser.name
               save(my_conn)
-      if not listener
+      if not listener and me.group == null
         DIV
           style:
-            height: 90
-          if me.group == null
-            DIV {},
-              PERSON
-                streams: streams
-                person: me
-                groupVolume: 0
-                my_conn: my_conn
-                height: 90
-                width: 120
-                drag: drag
-                borders: {}
-              P
-                style:
-                  float: 'left'
-                className: 'triangle-border left'
-                'Drag yourself to create or join a group'
+            height: '90px'
+          DIV {},
+            PERSON
+              streams: streams
+              person: me
+              groupVolume: 0
+              my_conn: my_conn
+              height: 90
+              width: 120
+              drag: drag
+              borders: {}
+            P
+              style:
+                float: 'left'
+              className: 'triangle-border left'
+              'Drag yourself to create or join a group'
 
 dom.TOPBAR.refresh = ->
   state = @props.state
