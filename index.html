@@ -121,6 +121,13 @@ dom.BODY = ->
               feed: feed.id
         error: console.error
         onmessage: (msg, jsep) ->
+          if msg["videoroom"] == "event"
+            console.log("TODO: do we care about this event?", msg)
+          else if msg["videoroom"] == "slow_link"
+            toastr.warning("Slow connection (remote stream " + feed.display + ")", JSON.stringify(msg["videoroom"]))
+          else
+            console.log("Unhandled event", msg)
+
           if jsep
             remote_feed.createAnswer
               jsep: jsep
@@ -186,6 +193,10 @@ dom.BODY = ->
                   console.log "TODO: handle detaching streams"
                 else if msg["videoroom"] == "error"
                   console.error msg["error"]
+                else if msg["videoroom"] == "slow_link"
+                  toastr.warning("Slow connection (local stream)", JSON.stringify(msg["videoroom"]["current-bitrate"]))
+                else
+                  console.error("Unhandled event", msg)
 
                 if jsep
                   plugin_handle.handleRemoteJsep
