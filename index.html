@@ -400,7 +400,7 @@ dom.PERSON = ->
       float: 'left'
       position: 'relative'
       cursor: (if person.id == me.id then 'pointer' else '')
-    if not (person.video and streams.streams[person.id])
+    if not person.video
       DIV
         style:
           backgroundColor: 'black'
@@ -421,6 +421,12 @@ dom.PERSON = ->
                 '(Audio-Only)'
               else
                 '(Muted)'
+    else if not streams.streams[person.id]
+      DIV
+        style:
+          height: '100%'
+          width: '100%'
+          background: 'url(/images/spinner-small.gif) no-repeat center'
     else
       DIV
         style:
