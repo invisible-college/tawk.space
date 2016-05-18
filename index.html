@@ -5,9 +5,6 @@ SMALLEST_PERSON_HEIGHT = 180
 SMALLEST_PERSON_WIDTH = 240
 
 old_state = null
-listener = true
-
-global_group = null
 
 janus = null
 plugin_handle = null
@@ -19,6 +16,14 @@ dom.BODY = ->
     localUser.name = 'Anonymous ' + random_numbers(4)
     save(localUser)
 
+  connections = fetch('/connections')
+  if @loading()
+    return DIV {}, 'Loading...'
+  active_connections = 0
+  for conn in connections.all
+    if conn.group != null and conn.app == 'talkspace' and conn.space == window.location.pathname.split('/')[2]
+      active_connections += 1
+
   my_conn = fetch('/connection')
   if @loading()
     return DIV {}, 'Loading...'
@@ -26,21 +31,13 @@ dom.BODY = ->
   if not me.id
     me.id = random_string(16)
     me.name = localUser.name
-    me.group = global_group
+    me.group = (if active_connections == 0 then random_string(16) else null)
     me.timeEntered = -1
     me.app = 'talkspace'
     me.space = window.location.pathname.split('/')[2]
-    me.video = false
-    me.audio = false
+    me.video = true
+    me.audio = true
     save(my_conn)
-
-  connections = fetch('/connections')
-  if @loading()
-    return DIV {}, 'Loading...'
-  active_connections = 0
-  for conn in connections.all
-    if conn.group != null and conn.app == 'talkspace' and conn.space == me.space
-      active_connections += 1
 
   drag = fetch('drag')
   if drag.dragging == undefined
@@ -194,15 +191,6 @@ dom.BODY = ->
 
               onlocalstream: (stream) ->
                 console.log "Got local stream", stream
-                stream_url = URL.createObjectURL(stream)
-                streams[me.id] = stream_url
-
-                save_me = (my_conn) ->
-                  my_conn.mine.video = true # might be false
-                  my_conn.mine.audio = true
-                  save my_conn
-                fetch '/connection', save_me
-                forget '/connection', save_me
 
                 save_streams = (streams) ->
                   streams.streams[me.id] =
@@ -219,12 +207,6 @@ dom.BODY = ->
           destroyed: ->
             console.error "Plugin destroyed"
         )
-
-    listener = false
-    me.video = false
-    me.audio = false
-    me.group = (if active_connections == 0 then random_string(16) else my_conn.mine.group)
-    save(my_conn)
 
   DIV {},
     TOPBAR
@@ -392,8 +374,7 @@ dom.GROUP.refresh = ->
     activeClass: "light-gray"
     hoverClass: "dark-gray"
     drop: ->
-      if not listener and me.group != group
-        global_group = group
+      if me.group != group
         me.group = group
         me.timeEntered = Date.now()
         save(my_conn)
@@ -524,7 +505,7 @@ dom.TOPBAR = ->
             onBlur: (e) ->
               me.name = localUser.name
               save(my_conn)
-      if not listener and me.group == null
+      if me.group == null
         DIV
           style:
             height: '90px'
@@ -559,7 +540,6 @@ dom.TOPBAR.refresh = ->
     activeClass: "light-gray"
     hoverClass: "dark-gray"
     drop: ->
-      global_group = null
       me.group = null
       me.timeEntered = -1
       save(my_conn)
