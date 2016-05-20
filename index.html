@@ -32,7 +32,7 @@ dom.BODY = ->
     me.id = random_string(16)
     me.name = localUser.name
     me.group = (if active_connections == 0 then random_string(16) else null)
-    me.timeEntered = -1
+    me.timeEntered = (if me.group then Date.now() else -1)
     me.app = 'talkspace'
     me.space = window.location.pathname.split('/')[1]
     me.video = true
@@ -415,11 +415,46 @@ dom.PERSON = ->
     id: person.id
     className: 'person'
     style:
-      height: @props.height + 'px'
-      width: @props.width + 'px'
+      height: height + 'px'
+      width: width + 'px'
       float: 'left'
       position: 'relative'
       cursor: (if person.id == me.id then 'pointer' else '')
+    if person.id == me.id
+      DIV
+        style:
+          position: 'absolute'
+          width: '100%'
+          bottom: '0'
+          left: '0'
+          zIndex: '100'
+          textAlign: 'right'
+        BUTTON
+          className: 'btn btn-default'
+          SPAN
+            className: 'glyphicon glyphicon-eye-' + (if me.video then 'open' else 'close')
+          onClick: (e) ->
+            console.log 'toggle video'
+            if me.video
+              plugin_handle.muteVideo()
+              me.video = false
+            else
+              plugin_handle.unmuteVideo()
+              me.video = true
+            save(my_conn)
+        BUTTON
+          className: 'btn btn-default'
+          SPAN
+            className: 'glyphicon glyphicon-volume-' + (if me.audio then 'up' else 'off')
+          onClick: (e) ->
+            console.log 'toggle audio'
+            if me.audio
+              plugin_handle.muteAudio()
+              me.audio = false
+            else
+              plugin_handle.unmuteAudio()
+              me.audio = true
+            save(my_conn)
     if not person.video
       DIV
         style:
