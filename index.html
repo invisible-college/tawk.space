@@ -21,7 +21,7 @@ dom.BODY = ->
     return DIV {}, 'Loading...'
   active_connections = 0
   for conn in connections.all
-    if conn.group != null and conn.app == 'talkspace' and conn.space == window.location.pathname.split('/')[2]
+    if conn.group != null and conn.app == 'talkspace' and conn.space == window.location.pathname.split('/')[1]
       active_connections += 1
 
   my_conn = fetch('/connection')
@@ -34,7 +34,7 @@ dom.BODY = ->
     me.group = (if active_connections == 0 then random_string(16) else null)
     me.timeEntered = -1
     me.app = 'talkspace'
-    me.space = window.location.pathname.split('/')[2]
+    me.space = window.location.pathname.split('/')[1]
     me.video = true
     me.audio = true
     save(my_conn)
@@ -173,7 +173,9 @@ dom.BODY = ->
               onmessage: (msg, jsep) ->
                 publishers = msg["publishers"] or []
                 for feed in publishers
-                  new_remote_feed feed
+                  conn = connections.all.find (el) -> el.id == feed.display
+                  if conn.space == me.space
+                    new_remote_feed feed
 
                 if msg["videoroom"] == "joined"
                   my_janus_id = msg["id"]
@@ -588,7 +590,7 @@ make_state = (connections) ->
   groups = {}
   for conn in connections.all
     if conn.app == 'talkspace' and
-        conn.space == window.location.pathname.split('/')[2] and
+        conn.space == window.location.pathname.split('/')[1] and
         conn.group != null
       if conn.group not of groups
         groups[conn.group] = []
