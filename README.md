@@ -46,11 +46,14 @@ sudo make install
 sudo make configs
 ```
 
-Configure Janus for https--edit `/opt/janus/etc/janus/janus.transport.http.cfg`:
+Configure Janus for https -- edit `/opt/janus/etc/janus/janus.transport.http.cfg`:
 * Under [general] set `http` to `no`
 * Set `https` to yes
 * Change the `secure_port` to `8089`
 * Under [certificates] set your public and private keys
+
+Configure Janus videoroom plugin -- edit `/opt/janus/etc/janus/janus.plugin.videoroom.cfg`
+* Set `max_publishers` to some large number--this controls how many people can be in tawk at once
 
 Run the Janus gateway (you might want to do this in `screen`):
 ```bash
