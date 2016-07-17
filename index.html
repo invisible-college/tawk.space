@@ -155,7 +155,6 @@ dom.BODY = ->
         detached: console.error
 
     Janus.init
-      debug: 'all'
       callback: ->
         if not Janus.isWebrtcSupported()
           toastr.error "No WebRTC support in your browser. You must use Chrome, Firefox, or Edge"
@@ -181,6 +180,14 @@ dom.BODY = ->
                 publishers = msg["publishers"] or []
                 for feed in publishers
                   conn = connections.all.find (el) -> el.id == feed.display
+                  if not conn
+                    toastr.error("ERROR: connection not found", JSON.stringify(feed))
+                    continue
+
+                  if not me
+                    toastr.error("ERROR: me is undefined", JSON.stringify(me))
+                    continue
+
                   if conn.space == me.space
                     new_remote_feed feed
 
