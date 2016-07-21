@@ -5,6 +5,7 @@
   "dependencies": {
     "body-parser": "^1.13.2",
     "express": "^4.3.1",
+    "hark": "^1.1.3",
     "sockjs": "^0.3.16",
     "statebus": "^3.0.25"
   }
