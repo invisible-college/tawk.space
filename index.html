@@ -39,6 +39,10 @@ dom.BODY = ->
     me.audio = true
     save(my_conn)
 
+    if Notification.permission != 'granted'
+      # Try to coax user to give us permission to do notifications
+      notification 'loaded', 'Welcome to tawk, ' + localUser.name, 'You can change your username at any time'
+
   drag = fetch('drag')
   if drag.dragging == undefined
     drag.dragging = false
@@ -76,9 +80,19 @@ dom.BODY = ->
       dimensions.person_width = dimensions.person_height * 4 / 3
     save(dimensions)
  
-  if not dimensions.person_width? or JSON.stringify(old_state) != JSON.stringify(state)
+  if not dimensions.person_width? or not JSON.stringify(state) == JSON.stringify(old_state)
     recalculate_dimensions()
   window.onresize = recalculate_dimensions
+
+  # TODO: this is horrible--refactor
+  if me.group and old_state
+    for groupObj in old_state
+      if me.group == groupObj.group and groupObj.members.find((person) -> me.id == person.id)
+        my_group = state.find((obj) -> obj.group == me.group)
+        for member in my_group.members
+          if not groupObj.members.find((person) -> person.id == member.id)
+            if not document.hasFocus()
+              notification 'tawk_new_member', member.name + ' joined your group', 'Click to say hello'
 
   old_state = state
 
@@ -159,7 +173,6 @@ dom.BODY = ->
                 # Transform to 0-100% scale
                 streams.streams[feed.display].volume = -2 * decibals
                 save streams
-                console.log streams.streams[feed.display]
               fetch 'all_streams', volume_change
               forget 'all_streams', volume_change
             )
@@ -244,7 +257,6 @@ dom.BODY = ->
                       # Transform to 0-100% scale
                       streams.streams[me.id].volume = -2 * decibals
                       save streams
-                      console.log streams.streams[me.id]
                     fetch 'all_streams', volume_change
                     forget 'all_streams', volume_change
                   )
@@ -466,7 +478,6 @@ dom.PERSON = ->
           SPAN
             className: 'glyphicon glyphicon-eye-' + (if me.video then 'open' else 'close')
           onClick: (e) ->
-            console.log 'toggle video'
             if me.video
               plugin_handle.muteVideo()
               me.video = false
@@ -479,7 +490,6 @@ dom.PERSON = ->
           SPAN
             className: 'glyphicon glyphicon-volume-' + (if me.audio then 'up' else 'off')
           onClick: (e) ->
-            console.log 'toggle audio'
             if me.audio
               plugin_handle.muteAudio()
               me.audio = false
@@ -692,7 +702,8 @@ make_state = (connections) ->
   for el, members of groups
     members.sort (a, b) ->
       return a.timeEntered - b.timeEntered
-  
+
+  # Turn into time-sorted array
   state = ({group: group, members: members} for group, members of groups)
   state.sort (a, b) ->
     # Uses the fact that members lists are already sorted
@@ -708,6 +719,28 @@ choose_borders = (index, divSize) ->
     topRight: (x == divSize.width - 1 and y == 0)
   }
   return borders
+
+notification = (tag, title, body) ->
+  create_notification = () ->
+    options =
+      body: body
+      tag: tag
+      icon: '/favicon.ico'
+    n = new Notification title, options
+    setTimeout n.close.bind(n), 5000
+
+    n.addEventListener 'click', () ->
+      # Bring them back to tawk
+      window.focus()
+      n.close()
+
+    # Browsers do not support "sound" property of Notification API
+    new Audio('/filling-your-inbox.mp3').play()
+  
+  if Notification.permission == 'granted'
+    create_notification()
+  else
+    Notification.requestPermission().then(create_notification)
 
 </script>
 
