@@ -1,5 +1,5 @@
 # tawk.space
-Simple, flexible video chats
+Social video chats
 
 Website: https://tawk.space/
 
