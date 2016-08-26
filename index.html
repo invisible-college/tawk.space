@@ -283,7 +283,6 @@ dom.BODY = ->
       state: state
       streams: streams
       my_conn: my_conn
-      dimensions: dimensions
 
 dom.GROUPS = ->
   state = @props.state
@@ -291,7 +290,6 @@ dom.GROUPS = ->
   my_conn = @props.my_conn
   me = my_conn.mine
   drag = fetch 'drag'
-  dimensions = @props.dimensions
 
   DIV
     id: 'groups'
@@ -305,14 +303,12 @@ dom.GROUPS = ->
         group: groupObj.group
         members: groupObj.members
         my_conn: my_conn
-        dimensions: dimensions
     if drag.dragging
       GROUP
         streams: streams
         group: drag.ghostGroup
         members: [null]
         my_conn: my_conn
-        dimensions: dimensions
 
 dom.GROUP = ->
   streams = @props.streams
@@ -320,7 +316,7 @@ dom.GROUP = ->
   members = @props.members
   my_conn = @props.my_conn
   me = my_conn.mine
-  dimensions = @props.dimensions
+  dimensions = fetch 'dimensions'
 
   group_info = fetch('/group/' + group)
   group_editing = fetch('editing-' + group)
@@ -412,7 +408,6 @@ dom.GROUP.refresh = ->
   members = @props.members
   my_conn = @props.my_conn
   me = my_conn.mine
-  dimensions = @props.dimensions
 
   $(@getDOMNode()).droppable
     tolerance: 'pointer'
