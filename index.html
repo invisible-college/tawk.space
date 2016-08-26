@@ -43,14 +43,8 @@ dom.BODY = ->
       # Try to coax user to give us permission to do notifications
       notification 'loaded', 'Welcome to tawk, ' + localUser.name, 'You can change your username at any time'
 
-  drag = fetch('drag')
-  if drag.dragging == undefined
-    drag.dragging = false
-    drag.ghostGroup = null
-    save(drag)
-
   state = make_state(connections)
-  
+
   dimensions = fetch('dimensions')
   recalculate_dimensions = ->
     # One group should first take up the screen horizontally
@@ -79,7 +73,7 @@ dom.BODY = ->
     else if dimensions.person_width = dimensions.person_height * 4 / 3
       dimensions.person_width = dimensions.person_height * 4 / 3
     save(dimensions)
- 
+
   if not dimensions.person_width? or not JSON.stringify(state) == JSON.stringify(old_state)
     recalculate_dimensions()
   window.onresize = recalculate_dimensions
@@ -116,10 +110,13 @@ dom.BODY = ->
               video: true
             jsep: jsep
         error: (error) ->
-          if audio
-            publish_local_stream false
-          else
-            console.error error
+          my_conn = fetch('/connection', (my_conn) ->
+            if audio
+              notification 'no_camera', 'No camera allowed', 'Trying audio-only mode'
+              publish_local_stream false
+            else
+              notification 'no_camera', 'No camera or microphone allowed', 'You are a listener'
+          )
 
     new_remote_feed = (feed) ->
       remote_feed = null
@@ -278,7 +275,6 @@ dom.BODY = ->
       streams: streams
       my_conn: my_conn
       localUser: localUser
-      drag: drag
     DIV
       style:
         border: '0'
@@ -289,7 +285,6 @@ dom.BODY = ->
       streams: streams
       my_conn: my_conn
       localUser: localUser
-      drag: drag
       dimensions: dimensions
 
 dom.GROUPS = ->
@@ -298,7 +293,7 @@ dom.GROUPS = ->
   my_conn = @props.my_conn
   me = my_conn.mine
   localUser = @props.localUser
-  drag = @props.drag
+  drag = fetch 'drag'
   dimensions = @props.dimensions
 
   DIV
@@ -314,7 +309,6 @@ dom.GROUPS = ->
         members: groupObj.members
         my_conn: my_conn
         localUser: localUser
-        drag: drag
         dimensions: dimensions
     if drag.dragging
       GROUP
@@ -323,7 +317,6 @@ dom.GROUPS = ->
         members: [null]
         my_conn: my_conn
         localUser: localUser
-        drag: drag
         dimensions: dimensions
 
 dom.GROUP = ->
@@ -333,7 +326,6 @@ dom.GROUP = ->
   my_conn = @props.my_conn
   me = my_conn.mine
   localUser = @props.localUser
-  drag = @props.drag
   dimensions = @props.dimensions
 
   group_info = fetch('/group/' + group)
@@ -381,7 +373,7 @@ dom.GROUP = ->
     onMouseEnter: (e) ->
       mouseover_group.group = group
       save(mouseover_group)
-    
+
     onMouseLeave: (e) ->
       mouseover_group.group = null
       save(mouseover_group)
@@ -395,7 +387,6 @@ dom.GROUP = ->
           my_conn: my_conn
           height: dimensions.person_height
           width: dimensions.person_width
-          drag: drag
           borders: choose_borders(index, divSize)
     if members[0] != null
       TEXTAREA
@@ -428,7 +419,6 @@ dom.GROUP.refresh = ->
   my_conn = @props.my_conn
   me = my_conn.mine
   localUser = @props.localUser
-  drag = @props.drag
   dimensions = @props.dimensions
 
   $(@getDOMNode()).droppable
@@ -442,7 +432,7 @@ dom.GROUP.refresh = ->
         me.group = group
         me.timeEntered = Date.now()
         save(my_conn)
-  
+
 dom.PERSON = ->
   streams = @props.streams
   my_conn = @props.my_conn
@@ -451,7 +441,6 @@ dom.PERSON = ->
   groupVolume = @props.groupVolume
   height = @props.height
   width = @props.width
-  drag = @props.drag
   borders = @props.borders
 
   DIV
@@ -557,7 +546,7 @@ dom.PERSON.refresh = ->
   me = my_conn.mine
   person = @props.person
   groupVolume = @props.groupVolume
-  drag = @props.drag
+  drag = fetch 'drag'
   borders = @props.borders
 
   if person.video and streams.streams[person.id]
@@ -569,15 +558,13 @@ dom.PERSON.refresh = ->
       zIndex: 1000
       start: (e, ui) ->
         drag.dragging = true
-        drag.group = me.group
         drag.ghostGroup = random_string 16
         save(drag)
       stop: (e, ui) ->
         drag.dragging = false
-        drag.group = null
         drag.ghostGroup = null
         save(drag)
-        
+
         ui.helper.css
           top: 0
           left: 0
@@ -588,7 +575,6 @@ dom.TOPBAR = ->
   my_conn = @props.my_conn
   me = my_conn.mine
   localUser = @props.localUser
-  drag = @props.drag
 
   DIV
     id: 'topbar'
@@ -629,7 +615,6 @@ dom.TOPBAR = ->
               my_conn: my_conn
               height: 90
               width: 120
-              drag: drag
               borders: {}
             P
               style:
@@ -643,7 +628,6 @@ dom.TOPBAR.refresh = ->
   my_conn = @props.my_conn
   me = my_conn.mine
   localUser = @props.localUser
-  drag = @props.drag
 
   $(@getDOMNode()).droppable
     greedy: true
@@ -721,6 +705,8 @@ choose_borders = (index, divSize) ->
   return borders
 
 notification = (tag, title, body) ->
+  console.info 'Sending notification', tag, title, body
+
   create_notification = () ->
     options =
       body: body
@@ -736,10 +722,10 @@ notification = (tag, title, body) ->
 
     # Browsers do not support "sound" property of Notification API
     new Audio('/filling-your-inbox.mp3').play()
-  
+
   if Notification.permission == 'granted'
     create_notification()
-  else
+  else if Notification.permission == 'default'
     Notification.requestPermission().then(create_notification)
 
 </script>
