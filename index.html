@@ -4,11 +4,52 @@ localStream = null
 SMALLEST_PERSON_HEIGHT = 180
 SMALLEST_PERSON_WIDTH = 240
 
-old_state = null
+old_state = {}
 
 janus = null
 plugin_handle = null
 my_janus_id = null
+
+fetch '/connections', (connections) ->
+  active_connections = fetch 'active_connections'
+  active_connections.count = 0
+  for conn in connections.all
+    if conn.group != null and conn.app == 'talkspace' and conn.space == window.location.pathname.split('/')[1]
+      active_connections.count += 1
+  save active_connections
+
+recalculate_dimensions = ->
+  dimensions = fetch 'dimensions'
+  active_connections = fetch 'active_connections'
+
+  # Hacky way to render groups as big as possible
+  screen_width = window.innerWidth
+  screen_height = window.innerHeight - $("#topbar").outerHeight(true)
+  if active_connections.count <= 1
+    dimensions.person_height = Math.max(screen_height - 60, SMALLEST_PERSON_HEIGHT)
+    dimensions.person_width = Math.max(screen_width / 2 - 60, SMALLEST_PERSON_WIDTH)
+  else if active_connections.count <= 2
+    dimensions.person_height = Math.max(screen_height - 60, SMALLEST_PERSON_HEIGHT)
+    dimensions.person_width = Math.max(screen_width / 3 - 60, SMALLEST_PERSON_WIDTH)
+  else if active_connections.count <= 4
+    dimensions.person_height = Math.max(screen_height / 2 - 60, SMALLEST_PERSON_HEIGHT)
+    dimensions.person_width = Math.max(screen_width / 3 - 60, SMALLEST_PERSON_WIDTH)
+  else if active_connections.count <= 7
+    dimensions.person_height = Math.max(screen_height / 2 - 60, SMALLEST_PERSON_HEIGHT)
+    dimensions.person_width = Math.max(screen_width / 4 - 60, SMALLEST_PERSON_WIDTH)
+  else
+    dimensions.person_height = SMALLEST_PERSON_HEIGHT
+    dimensions.person_width = SMALLEST_PERSON_WIDTH
+
+  if dimensions.person_height > dimensions.person_width * 3 / 4
+    dimensions.person_height = dimensions.person_width * 3 / 4
+  else if dimensions.person_width = dimensions.person_height * 4 / 3
+    dimensions.person_width = dimensions.person_height * 4 / 3
+
+  save dimensions
+
+fetch '/connections', recalculate_dimensions
+window.onresize = recalculate_dimensions
 
 dom.BODY = ->
   localUser = fetch('ls/localUser')
@@ -19,10 +60,6 @@ dom.BODY = ->
   connections = fetch('/connections')
   if @loading()
     return DIV {}, 'Loading...'
-  active_connections = 0
-  for conn in connections.all
-    if conn.group != null and conn.app == 'talkspace' and conn.space == window.location.pathname.split('/')[1]
-      active_connections += 1
 
   my_conn = fetch('/connection')
   if @loading()
@@ -44,39 +81,6 @@ dom.BODY = ->
       notification 'loaded', 'Welcome to tawk, ' + localUser.name, 'You can change your username at any time'
 
   state = make_state(connections)
-
-  dimensions = fetch('dimensions')
-  recalculate_dimensions = ->
-    # One group should first take up the screen horizontally
-    # 2-4 groups should take up the screen horizontally
-    # Then fallback to min person width/height
-    screen_width = window.innerWidth
-    screen_height = window.innerHeight - $("#topbar").outerHeight(true)
-    if active_connections <= 1
-      dimensions.person_height = Math.max(screen_height - 60, SMALLEST_PERSON_HEIGHT)
-      dimensions.person_width = Math.max(screen_width / 2 - 60, SMALLEST_PERSON_WIDTH)
-    else if active_connections <= 2
-      dimensions.person_height = Math.max(screen_height - 60, SMALLEST_PERSON_HEIGHT)
-      dimensions.person_width = Math.max(screen_width / 3 - 60, SMALLEST_PERSON_WIDTH)
-    else if active_connections <= 4
-      dimensions.person_height = Math.max(screen_height / 2 - 60, SMALLEST_PERSON_HEIGHT)
-      dimensions.person_width = Math.max(screen_width / 3 - 60, SMALLEST_PERSON_WIDTH)
-    else if active_connections <= 7
-      dimensions.person_height = Math.max(screen_height / 2 - 60, SMALLEST_PERSON_HEIGHT)
-      dimensions.person_width = Math.max(screen_width / 4 - 60, SMALLEST_PERSON_WIDTH)
-    else
-      dimensions.person_height = SMALLEST_PERSON_HEIGHT
-      dimensions.person_width = SMALLEST_PERSON_WIDTH
-
-    if dimensions.person_height > dimensions.person_width * 3 / 4
-      dimensions.person_height = dimensions.person_width * 3 / 4
-    else if dimensions.person_width = dimensions.person_height * 4 / 3
-      dimensions.person_width = dimensions.person_height * 4 / 3
-    save(dimensions)
-
-  if not dimensions.person_width? or not JSON.stringify(state) == JSON.stringify(old_state)
-    recalculate_dimensions()
-  window.onresize = recalculate_dimensions
 
   # TODO: this is horrible--refactor
   if me.group and old_state
