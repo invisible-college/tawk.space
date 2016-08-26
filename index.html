@@ -90,7 +90,7 @@ dom.BODY = ->
 
   old_state = state
 
-  streams = fetch('all_streams')
+  streams = fetch('streams')
   if not streams.streams
     streams.streams = {}
     save(streams)
@@ -170,12 +170,12 @@ dom.BODY = ->
                 # Transform to 0-100% scale
                 streams.streams[feed.display].volume = -2 * decibals
                 save streams
-              fetch 'all_streams', volume_change
-              forget 'all_streams', volume_change
+              fetch 'streams', volume_change
+              forget 'streams', volume_change
             )
 
-          fetch 'all_streams', save_streams
-          forget 'all_streams', save_streams
+          fetch 'streams', save_streams
+          forget 'streams', save_streams
 
         oncleanup: console.error
         detached: console.error
@@ -254,12 +254,12 @@ dom.BODY = ->
                       # Transform to 0-100% scale
                       streams.streams[me.id].volume = -2 * decibals
                       save streams
-                    fetch 'all_streams', volume_change
-                    forget 'all_streams', volume_change
+                    fetch 'streams', volume_change
+                    forget 'streams', volume_change
                   )
 
-                fetch 'all_streams', save_streams
-                forget 'all_streams', save_streams
+                fetch 'streams', save_streams
+                forget 'streams', save_streams
 
               onremotestream: Janus.noop
               oncleanup: console.error
@@ -272,7 +272,6 @@ dom.BODY = ->
   DIV {},
     TOPBAR
       state: state
-      streams: streams
       my_conn: my_conn
     DIV
       style:
@@ -281,12 +280,10 @@ dom.BODY = ->
         backgroundImage: 'linear-gradient(to right, rgba(0, 0, 0, 0), rgba(0, 0, 0, 0.75), rgba(0, 0, 0, 0))'
     GROUPS
       state: state
-      streams: streams
       my_conn: my_conn
 
 dom.GROUPS = ->
   state = @props.state
-  streams = @props.streams
   my_conn = @props.my_conn
   me = my_conn.mine
   drag = fetch 'drag'
@@ -299,19 +296,16 @@ dom.GROUPS = ->
       clear: 'both'
     for groupObj in state
       GROUP
-        streams: streams
         group: groupObj.group
         members: groupObj.members
         my_conn: my_conn
     if drag.dragging
       GROUP
-        streams: streams
         group: drag.ghostGroup
         members: [null]
         my_conn: my_conn
 
 dom.GROUP = ->
-  streams = @props.streams
   group = @props.group
   members = @props.members
   my_conn = @props.my_conn
@@ -371,7 +365,6 @@ dom.GROUP = ->
     for user, index in members
       if user != null
         PERSON
-          streams: streams
           person: user
           groupVolume: groupVolume
           my_conn: my_conn
@@ -403,7 +396,6 @@ dom.GROUP = ->
           , 500
 
 dom.GROUP.refresh = ->
-  streams = @props.streams
   group = @props.group
   members = @props.members
   my_conn = @props.my_conn
@@ -422,7 +414,7 @@ dom.GROUP.refresh = ->
         save(my_conn)
 
 dom.PERSON = ->
-  streams = @props.streams
+  streams = fetch 'streams'
   my_conn = @props.my_conn
   me = my_conn.mine
   person = @props.person
@@ -529,7 +521,7 @@ dom.PERSON = ->
           borderLeft: '5px solid #7FFF00'
 
 dom.PERSON.refresh = ->
-  streams = @props.streams
+  streams = fetch 'streams'
   my_conn = @props.my_conn
   me = my_conn.mine
   person = @props.person
@@ -559,7 +551,6 @@ dom.PERSON.refresh = ->
 
 dom.TOPBAR = ->
   state = @props.state
-  streams = @props.streams
   my_conn = @props.my_conn
   me = my_conn.mine
   localUser = fetch 'ls/localUser'
@@ -597,7 +588,6 @@ dom.TOPBAR = ->
             height: '90px'
           DIV {},
             PERSON
-              streams: streams
               person: me
               groupVolume: 0
               my_conn: my_conn
@@ -612,7 +602,6 @@ dom.TOPBAR = ->
 
 dom.TOPBAR.refresh = ->
   state = @props.state
-  streams = @props.streams
   my_conn = @props.my_conn
   me = my_conn.mine
 
