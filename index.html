@@ -12,7 +12,7 @@ my_janus_id = null
 
 dom.BODY = ->
   localUser = fetch('ls/localUser')
-  if not localUser.name?
+  if not localUser.name
     localUser.name = 'Anonymous ' + random_numbers(4)
     save(localUser)
 
@@ -274,7 +274,6 @@ dom.BODY = ->
       state: state
       streams: streams
       my_conn: my_conn
-      localUser: localUser
     DIV
       style:
         border: '0'
@@ -284,7 +283,6 @@ dom.BODY = ->
       state: state
       streams: streams
       my_conn: my_conn
-      localUser: localUser
       dimensions: dimensions
 
 dom.GROUPS = ->
@@ -292,7 +290,6 @@ dom.GROUPS = ->
   streams = @props.streams
   my_conn = @props.my_conn
   me = my_conn.mine
-  localUser = @props.localUser
   drag = fetch 'drag'
   dimensions = @props.dimensions
 
@@ -308,7 +305,6 @@ dom.GROUPS = ->
         group: groupObj.group
         members: groupObj.members
         my_conn: my_conn
-        localUser: localUser
         dimensions: dimensions
     if drag.dragging
       GROUP
@@ -316,7 +312,6 @@ dom.GROUPS = ->
         group: drag.ghostGroup
         members: [null]
         my_conn: my_conn
-        localUser: localUser
         dimensions: dimensions
 
 dom.GROUP = ->
@@ -325,7 +320,6 @@ dom.GROUP = ->
   members = @props.members
   my_conn = @props.my_conn
   me = my_conn.mine
-  localUser = @props.localUser
   dimensions = @props.dimensions
 
   group_info = fetch('/group/' + group)
@@ -418,7 +412,6 @@ dom.GROUP.refresh = ->
   members = @props.members
   my_conn = @props.my_conn
   me = my_conn.mine
-  localUser = @props.localUser
   dimensions = @props.dimensions
 
   $(@getDOMNode()).droppable
@@ -574,7 +567,7 @@ dom.TOPBAR = ->
   streams = @props.streams
   my_conn = @props.my_conn
   me = my_conn.mine
-  localUser = @props.localUser
+  localUser = fetch 'ls/localUser'
 
   DIV
     id: 'topbar'
@@ -627,7 +620,6 @@ dom.TOPBAR.refresh = ->
   streams = @props.streams
   my_conn = @props.my_conn
   me = my_conn.mine
-  localUser = @props.localUser
 
   $(@getDOMNode()).droppable
     greedy: true
