@@ -11,6 +11,9 @@ plugin_handle = null
 my_janus_id = null
 
 fetch '/connections', (connections) ->
+  if not connections.all?
+    return
+
   active_connections = fetch 'active_connections'
   active_connections.count = 0
   for conn in connections.all
@@ -61,6 +64,9 @@ dom.BODY = ->
   if @loading()
     return DIV {}, 'Loading...'
 
+  active_connections = fetch('active_connections')
+  active_connections.count ||= 0
+
   my_conn = fetch('/connection')
   if @loading()
     return DIV {}, 'Loading...'
@@ -68,7 +74,7 @@ dom.BODY = ->
   if not me.id
     me.id = random_string(16)
     me.name = localUser.name
-    me.group = (if active_connections == 0 then random_string(16) else null)
+    me.group = (if active_connections.count == 0 then random_string(16) else null)
     me.timeEntered = (if me.group then Date.now() else -1)
     me.app = 'talkspace'
     me.space = window.location.pathname.split('/')[1]
@@ -332,19 +338,19 @@ dom.GROUP = ->
       (mouseover_group.group == null and group == me.group) or
       (mouseover_group.group == group and group == me.group)
     groupVolume = 1.0
-    opacity = 1;
+    opacity = 1
   else if (group == mouseover_group.group)
     groupVolume = 0.8
-    opacity = 1;
+    opacity = 1
   else if (group == me.group)
     groupVolume = 0.2
-    opacity = 1;
+    opacity = 1
   else if (me.group)
     groupVolume = 0.0
-    opacity = 0.5;
+    opacity = 0.5
   else
     groupVolume = 1.0
-    opacity = 0.5;
+    opacity = 0.5
 
   DIV
     id: group
@@ -738,8 +744,8 @@ notification = (tag, title, body) ->
 </head>
 
 <script>
-  statebus_server = window.location.protocol + '//' + window.location.hostname + ':3003'
-  statebus_version = 3
+  statebus_server = window.location.protocol + '//' + window.location.hostname + ':3004'
+  statebus_version = 4
 </script>
-<script src="https://stateb.us/client.js" ></script>
+<script src="https://stateb.us/client4.js" ></script>
 <script src="/janus.js" ></script>

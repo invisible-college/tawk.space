@@ -9,9 +9,13 @@ var creds = {
 };
 var http = require('http');
 var httpsServer = require('https').createServer(creds, app);
-var bus = require('statebus/server')();
 
-bus.serve({port: 3003, client_definition: function(cbus) {cbus.route_defaults_to(bus)}})
+var bus = require('statebus/server')({
+    port: 3004,
+    client_definition: function(cbus) {
+        cbus.route_defaults_to(bus);
+    },
+});
 
 app.use(express.static(__dirname + '/'));
 app.use(express.static(__dirname + '/../janus-gateway/html/')); // for janus js api
