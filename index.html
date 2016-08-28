@@ -4,11 +4,33 @@ localStream = null
 SMALLEST_PERSON_HEIGHT = 180
 SMALLEST_PERSON_WIDTH = 240
 
-old_state = {}
-
 janus = null
 plugin_handle = null
 my_janus_id = null
+
+fetch '/connections', (connections) ->
+  groups = {}
+  for conn in connections.all
+    if conn.app == 'talkspace' and
+        conn.space == window.location.pathname.split('/')[1] and
+        conn.group != null
+      if conn.group not of groups
+        groups[conn.group] = []
+      groups[conn.group].push(conn)
+  for gid, members of groups
+    members.sort (a, b) ->
+      return a.timeEntered - b.timeEntered
+    save
+      key: 'group/' + gid
+      members: members
+
+  gids = (gid for gid, members of groups)
+  gids.sort (gidA, gidB) ->
+    # Uses the fact that members lists are already sorted
+    return groups[gidA].members[0].timeEntered - groups[gidB].members[0].timeEntered
+  save
+    key: 'groups'
+    ids: gids
 
 fetch '/connections', (connections) ->
   if not connections.all?
@@ -85,20 +107,6 @@ dom.BODY = ->
     if Notification.permission != 'granted'
       # Try to coax user to give us permission to do notifications
       notification 'loaded', 'Welcome to tawk, ' + localUser.name, 'You can change your username at any time'
-
-  state = make_state(connections)
-
-  # TODO: this is horrible--refactor
-  if me.group and old_state
-    for groupObj in old_state
-      if me.group == groupObj.group and groupObj.members.find((person) -> me.id == person.id)
-        my_group = state.find((obj) -> obj.group == me.group)
-        for member in my_group.members
-          if not groupObj.members.find((person) -> person.id == member.id)
-            if not document.hasFocus()
-              notification 'tawk_new_member', member.name + ' joined your group', 'Click to say hello'
-
-  old_state = state
 
   streams = fetch('streams')
   if not streams.streams
@@ -281,7 +289,6 @@ dom.BODY = ->
 
   DIV {},
     TOPBAR
-      state: state
       my_conn: my_conn
     DIV
       style:
@@ -289,11 +296,10 @@ dom.BODY = ->
         height: '1px'
         backgroundImage: 'linear-gradient(to right, rgba(0, 0, 0, 0), rgba(0, 0, 0, 0.75), rgba(0, 0, 0, 0))'
     GROUPS
-      state: state
       my_conn: my_conn
 
 dom.GROUPS = ->
-  state = @props.state
+  gids = fetch('groups').ids or []
   my_conn = @props.my_conn
   me = my_conn.mine
   drag = fetch 'drag'
@@ -304,45 +310,43 @@ dom.GROUPS = ->
       height: 'auto'
       minHeight: '85%'
       clear: 'both'
-    for groupObj in state
+    for gid in gids
       GROUP
-        group: groupObj.group
-        members: groupObj.members
+        gid: gid
         my_conn: my_conn
     if drag.dragging
       GROUP
-        group: drag.ghostGroup
-        members: [null]
+        gid: drag.ghostGroup
         my_conn: my_conn
 
 dom.GROUP = ->
-  group = @props.group
-  members = @props.members
+  gid = @props.gid
+  members = fetch('group/' + gid).members or []
   my_conn = @props.my_conn
   me = my_conn.mine
   dimensions = fetch 'dimensions'
 
-  group_info = fetch('/group/' + group)
-  group_editing = fetch('editing-' + group)
+  group_info = fetch('/group/' + gid)
+  group_editing = fetch('editing-' + gid)
   if not group_editing.timer
     group_editing.text = (if group_info.text == undefined then 'This is your group scratch space' else group_info.text)
 
-  divSize = group_size(members.length)
+  divSize = group_size(members.length or 1) # ghost group is size 1
 
   mouseover_group = fetch('mouseover_group')
   if mouseover_group.group == undefined
     mouseover_group.group = null
     save(mouseover_group)
 
-  if (group == mouseover_group.group and not me.group) or
-      (mouseover_group.group == null and group == me.group) or
-      (mouseover_group.group == group and group == me.group)
+  if (gid == mouseover_group.group and not me.group) or
+      (mouseover_group.group == null and gid == me.group) or
+      (mouseover_group.group == gid and gid == me.group)
     groupVolume = 1.0
     opacity = 1
-  else if (group == mouseover_group.group)
+  else if (gid == mouseover_group.group)
     groupVolume = 0.8
     opacity = 1
-  else if (group == me.group)
+  else if (gid == me.group)
     groupVolume = 0.2
     opacity = 1
   else if (me.group)
@@ -353,7 +357,7 @@ dom.GROUP = ->
     opacity = 0.5
 
   DIV
-    id: group
+    id: gid
     className: 'light-gray'
     style:
       float: 'left'
@@ -365,7 +369,7 @@ dom.GROUP = ->
       opacity: opacity
 
     onMouseEnter: (e) ->
-      mouseover_group.group = group
+      mouseover_group.group = gid
       save(mouseover_group)
 
     onMouseLeave: (e) ->
@@ -381,7 +385,7 @@ dom.GROUP = ->
           height: dimensions.person_height
           width: dimensions.person_width
           borders: choose_borders(index, divSize)
-    if members[0] != null
+    if members.length
       TEXTAREA
         className: 'form-control'
         rows: 2
@@ -406,8 +410,7 @@ dom.GROUP = ->
           , 500
 
 dom.GROUP.refresh = ->
-  group = @props.group
-  members = @props.members
+  gid = @props.gid
   my_conn = @props.my_conn
   me = my_conn.mine
 
@@ -418,8 +421,8 @@ dom.GROUP.refresh = ->
     activeClass: "light-gray"
     hoverClass: "dark-gray"
     drop: ->
-      if me.group != group
-        me.group = group
+      if me.group != gid
+        me.group = gid
         me.timeEntered = Date.now()
         save(my_conn)
 
@@ -659,27 +662,6 @@ group_size = (num_people) ->
     return horizontal_orientation
   else
     return {height: horizontal_orientation.width, width: horizontal_orientation.height}
-
-make_state = (connections) ->
-  groups = {}
-  for conn in connections.all
-    if conn.app == 'talkspace' and
-        conn.space == window.location.pathname.split('/')[1] and
-        conn.group != null
-      if conn.group not of groups
-        groups[conn.group] = []
-      groups[conn.group].push(conn)
-  for el, members of groups
-    members.sort (a, b) ->
-      return a.timeEntered - b.timeEntered
-
-  # Turn into time-sorted array
-  state = ({group: group, members: members} for group, members of groups)
-  state.sort (a, b) ->
-    # Uses the fact that members lists are already sorted
-    return a.members[0].timeEntered - b.members[0].timeEntered
-
-  return state
 
 choose_borders = (index, divSize) ->
   x = index % divSize.width
