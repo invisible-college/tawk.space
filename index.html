@@ -151,7 +151,7 @@ dom.BODY = ->
           if msg["videoroom"] == "event"
             console.log("TODO: do we care about this event?", msg)
           else if msg["videoroom"] == "slow_link"
-            toastr.warning("Slow connection (remote stream " + feed.display + ")", JSON.stringify(msg["videoroom"]))
+            notification 'slow link', "Slow connection (remote stream " + feed.display + ")", JSON.stringify(msg["videoroom"])
           else
             console.log("Unhandled event", msg)
 
@@ -199,7 +199,7 @@ dom.BODY = ->
     Janus.init
       callback: ->
         if not Janus.isWebrtcSupported()
-          toastr.error "No WebRTC support in your browser. You must use Chrome, Firefox, or Edge"
+          notification '', "No WebRTC support in your browser.", "You must use Chrome, Firefox, or Edge"
 
         janus = new Janus(
           server: 'https://' + window.location.hostname + ':8089/janus'
@@ -222,12 +222,8 @@ dom.BODY = ->
                 publishers = msg["publishers"] or []
                 for feed in publishers
                   conn = connections.all.find (el) -> el.id == feed.display
-                  if not conn
-                    toastr.error("ERROR: connection not found", JSON.stringify(feed))
-                    continue
-
-                  if not me
-                    toastr.error("ERROR: me is undefined", JSON.stringify(me))
+                  if not conn or not me
+                    # TODO: wat
                     continue
 
                   if conn.space == me.space
@@ -243,7 +239,7 @@ dom.BODY = ->
                 else if msg["videoroom"] == "error"
                   console.error msg["error"]
                 else if msg["videoroom"] == "slow_link"
-                  toastr.warning("Slow connection (local stream)", JSON.stringify(msg["videoroom"]["current-bitrate"]))
+                  notification 'slow link', "Slow connection (local stream)", JSON.stringify(msg["videoroom"]["current-bitrate"])
                 else
                   console.error("Unhandled event", msg)
 
@@ -709,9 +705,6 @@ notification = (tag, title, body) ->
   <link href='https://maxcdn.bootstrapcdn.com/bootstrap/3.2.0/css/bootstrap.min.css' rel='stylesheet'>
   <link href='https://maxcdn.bootstrapcdn.com/bootstrap/3.2.0/css/bootstrap-theme.min.css' rel='stylesheet'>
   <script src='https://maxcdn.bootstrapcdn.com/bootstrap/3.2.0/js/bootstrap.min.js'></script>
-
-  <script src='https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/js/toastr.min.js'></script>
-  <link href='https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/css/toastr.min.css' rel='stylesheet'>
 
   <script src='/node_modules/hark/hark.bundle.js'></script>
 
