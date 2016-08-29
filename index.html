@@ -128,13 +128,11 @@ dom.BODY = ->
               video: true
             jsep: jsep
         error: (error) ->
-          my_conn = fetch('/connection', (my_conn) ->
-            if audio
-              notification 'no_camera', 'No camera allowed', 'Trying audio-only mode'
-              publish_local_stream false
-            else
-              notification 'no_camera', 'No camera or microphone allowed', 'You are a listener'
-          )
+          if audio
+            notification 'no_camera', 'No camera allowed', 'Trying audio-only mode'
+            publish_local_stream false
+          else
+            notification 'no_camera', 'No camera or microphone allowed', 'You are a listener'
 
     new_remote_feed = (feed) ->
       remote_feed = null
