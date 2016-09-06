@@ -27,7 +27,7 @@ fetch '/connections', (connections) ->
   gids = (gid for gid, members of groups)
   gids.sort (gidA, gidB) ->
     # Uses the fact that members lists are already sorted
-    return groups[gidA].members[0].timeEntered - groups[gidB].members[0].timeEntered
+    return groups[gidA][0].timeEntered - groups[gidB][0].timeEntered
   save
     key: 'groups'
     ids: gids
