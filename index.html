@@ -170,28 +170,23 @@ dom.BODY = ->
               error: console.error
         onlocalstream: Janus.noop
         onremotestream: (stream) ->
-          save_streams = (streams) ->
-            streams.streams[feed.display] =
-              janus_id: my_janus_id
-              url: URL.createObjectURL(stream)
-              volume: 0
-            save streams
+          # TODO: forget this key when they leave
+          save
+            key: 'stream/' + feed.display,
+            janus_id: my_janus_id
+            url: URL.createObjectURL(stream)
+            volume: 0
 
-            speech = hark(stream, {interval: 200, play: true})
-            speech.on('volume_change', (decibals, threshold) ->
-              volume_change = (streams) ->
-                if decibals < threshold
-                  # Probably not human speech
-                  decibals = 0
-                # Transform to 0-100% scale
-                streams.streams[feed.display].volume = -2 * decibals
-                save streams
-              fetch 'streams', volume_change
-              forget 'streams', volume_change
-            )
-
-          fetch 'streams', save_streams
-          forget 'streams', save_streams
+          speech = hark(stream, {interval: 200, play: true})
+          speech.on('volume_change', (decibals, threshold) ->
+            stream = fetch 'stream/' + feed.display
+            if decibals < threshold
+              # Probably not human speech
+              decibals = 0
+            # Transform to 0-100% scale
+            stream.volume = -2 * decibals
+            save stream
+          )
 
         oncleanup: console.error
         detached: console.error
@@ -250,28 +245,22 @@ dom.BODY = ->
               onlocalstream: (stream) ->
                 console.log "Got local stream", stream
 
-                save_streams = (streams) ->
-                  streams.streams[me.id] =
-                    janus_id: my_janus_id
-                    url: URL.createObjectURL(stream)
-                    volume: 0
-                  save streams
+                save
+                  key: 'stream/' + me.id
+                  janus_id: my_janus_id
+                  url: URL.createObjectURL(stream)
+                  volume: 0
 
-                  speech = hark(stream, {interval: 200, play: false})
-                  speech.on('volume_change', (decibals, threshold) ->
-                    volume_change = (streams) ->
-                      if decibals < threshold
-                        # Probably not human speech
-                        decibals = 0
-                      # Transform to 0-100% scale
-                      streams.streams[me.id].volume = -2 * decibals
-                      save streams
-                    fetch 'streams', volume_change
-                    forget 'streams', volume_change
-                  )
-
-                fetch 'streams', save_streams
-                forget 'streams', save_streams
+                speech = hark(stream, {interval: 200, play: false})
+                speech.on('volume_change', (decibals, threshold) ->
+                  stream = fetch 'stream/' + me.id
+                  if decibals < threshold
+                    # Probably not human speech
+                    decibals = 0
+                  # Transform to 0-100% scale
+                  stream.volume = -2 * decibals
+                  save stream
+                )
 
               onremotestream: Janus.noop
               oncleanup: console.error
@@ -416,7 +405,6 @@ dom.GROUP.refresh = ->
         save(my_conn)
 
 dom.PERSON = ->
-  streams = fetch 'streams'
   my_conn = fetch '/connection'
   me = my_conn.mine
   person = @props.person
@@ -424,6 +412,7 @@ dom.PERSON = ->
   height = @props.height
   width = @props.width
   borders = @props.borders
+  stream = fetch 'stream/' + person.id
 
   DIV
     title: person.name
@@ -489,7 +478,7 @@ dom.PERSON = ->
                 '(Audio-Only)'
               else
                 '(Muted)'
-    else if not streams.streams[person.id]
+    else if not stream
       DIV
         style:
           height: '100%'
@@ -503,7 +492,7 @@ dom.PERSON = ->
           height: height + 'px'
         VIDEO
           autoPlay: 'true'
-          src: streams.streams[person.id].url
+          src: stream.url
           style:
             position: 'relative'
             height: '100%'
@@ -512,26 +501,26 @@ dom.PERSON = ->
             # These properties are flipped horizontally because the div is flipped horizontally
             borderTopLeftRadius: (if borders.topRight then '10px' else '')
             borderTopRightRadius: (if borders.topLeft then '10px' else '')
-    if streams.streams[person.id] and person.audio
+    if stream and person.audio
       DIV
         style:
           position: 'absolute'
           bottom: 0
           right: 0
-          height: streams.streams[person.id].volume + 'px'
+          height: stream.volume + 'px'
           width: '20px'
           borderLeft: '5px solid #7FFF00'
 
 dom.PERSON.refresh = ->
-  streams = fetch 'streams'
   person = @props.person
   groupVolume = @props.groupVolume
   drag = fetch 'drag'
   borders = @props.borders
   my_conn = fetch '/connection'
   me = my_conn.mine
+  stream = fetch 'stream/' + person.id
 
-  if person.video and streams.streams[person.id]
+  if person.video and stream
     @getDOMNode().getElementsByTagName('video')[0].volume = (if person.id != me.id then groupVolume else 0)
 
   if me.id == person.id
