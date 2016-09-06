@@ -405,14 +405,14 @@ dom.GROUP.refresh = ->
         save(my_conn)
 
 dom.PERSON = ->
-  my_conn = fetch '/connection'
-  me = my_conn.mine
   person = @props.person
   groupVolume = @props.groupVolume
   height = @props.height
   width = @props.width
   borders = @props.borders
   stream = fetch 'stream/' + person.id
+  my_conn = fetch '/connection'
+  me = my_conn.mine
 
   DIV
     title: person.name
@@ -514,11 +514,11 @@ dom.PERSON = ->
 dom.PERSON.refresh = ->
   person = @props.person
   groupVolume = @props.groupVolume
-  drag = fetch 'drag'
   borders = @props.borders
+  drag = fetch 'drag'
+  stream = fetch 'stream/' + person.id
   my_conn = fetch '/connection'
   me = my_conn.mine
-  stream = fetch 'stream/' + person.id
 
   if person.video and stream
     @getDOMNode().getElementsByTagName('video')[0].volume = (if person.id != me.id then groupVolume else 0)
@@ -542,9 +542,9 @@ dom.PERSON.refresh = ->
 
 dom.TOPBAR = ->
   state = @props.state
+  localUser = fetch 'ls/localUser'
   my_conn = fetch '/connection'
   me = my_conn.mine
-  localUser = fetch 'ls/localUser'
 
   DIV
     id: 'topbar'
