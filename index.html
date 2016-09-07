@@ -8,73 +8,110 @@ janus = null
 plugin_handle = null
 my_janus_id = null
 
-fetch '/connections', (connections) ->
+###############################################################################
+# Client Bus
+###############################################################################
+
+bus('connections').to_fetch = (key) ->
+  connections = fetch '/connections'
+  if not connections.all
+    connections.all = []
+
+  connections
+
+bus('connection/*').to_fetch = (key) ->
+  connections = fetch 'connections'
+  target_id = key.split('/')[1]
+  conn = connections.all.find (el) -> el.id == target_id
+
+  conn or {id: target_id}
+
+bus('_groups').to_fetch = (key) ->
   groups = {}
+  connections = fetch 'connections'
   for conn in connections.all
     if conn.app == 'talkspace' and
         conn.space == window.location.pathname.split('/')[1] and
         conn.group != null
+  
       if conn.group not of groups
         groups[conn.group] = []
       groups[conn.group].push(conn)
+
   for gid, members of groups
     members.sort (a, b) ->
       return a.timeEntered - b.timeEntered
-    save
-      key: 'group/' + gid
-      members: members
 
+  groups: groups
+
+bus('group/*').to_fetch = (key) ->
+  groups = fetch('_groups').groups or {}
+  gid = key.split('/')[1]
+
+  members: (groups[gid] or [])
+
+bus('gids').to_fetch = (key) ->
+  groups = fetch('_groups').groups or {}
   gids = (gid for gid, members of groups)
   gids.sort (gidA, gidB) ->
     # Uses the fact that members lists are already sorted
     return groups[gidA][0].timeEntered - groups[gidB][0].timeEntered
-  save
-    key: 'groups'
-    ids: gids
 
-fetch '/connections', (connections) ->
-  if not connections.all?
-    return
+  ids: gids
 
-  active_connections = fetch 'active_connections'
-  active_connections.count = 0
+bus('active_connections').to_fetch = (key) ->
+  connections = fetch 'connections'
+
+  count = 0
   for conn in connections.all
     if conn.group != null and conn.app == 'talkspace' and conn.space == window.location.pathname.split('/')[1]
-      active_connections.count += 1
-  save active_connections
+      count += 1
 
-recalculate_dimensions = ->
-  dimensions = fetch 'dimensions'
+  count: count
+
+bus('dimensions').to_fetch = (key) ->
+  connections = fetch '/connections'
   active_connections = fetch 'active_connections'
 
+  screen_width = fetch('window_size').width
+  screen_height = fetch('window_size').height
+
+  person_height = SMALLEST_PERSON_HEIGHT
+  person_width = SMALLEST_PERSON_WIDTH
+
   # Hacky way to render groups as big as possible
-  screen_width = window.innerWidth
-  screen_height = window.innerHeight - $("#topbar").outerHeight(true)
+  # when there are only a few people in the space
   if active_connections.count <= 1
-    dimensions.person_height = Math.max(screen_height - 60, SMALLEST_PERSON_HEIGHT)
-    dimensions.person_width = Math.max(screen_width / 2 - 60, SMALLEST_PERSON_WIDTH)
+    person_height = Math.max(screen_height - 60, SMALLEST_PERSON_HEIGHT)
+    person_width = Math.max(screen_width / 2 - 60, SMALLEST_PERSON_WIDTH)
   else if active_connections.count <= 2
-    dimensions.person_height = Math.max(screen_height - 60, SMALLEST_PERSON_HEIGHT)
-    dimensions.person_width = Math.max(screen_width / 3 - 60, SMALLEST_PERSON_WIDTH)
+    person_height = Math.max(screen_height - 60, SMALLEST_PERSON_HEIGHT)
+    person_width = Math.max(screen_width / 3 - 60, SMALLEST_PERSON_WIDTH)
   else if active_connections.count <= 4
-    dimensions.person_height = Math.max(screen_height / 2 - 60, SMALLEST_PERSON_HEIGHT)
-    dimensions.person_width = Math.max(screen_width / 3 - 60, SMALLEST_PERSON_WIDTH)
+    person_height = Math.max(screen_height / 2 - 60, SMALLEST_PERSON_HEIGHT)
+    person_width = Math.max(screen_width / 3 - 60, SMALLEST_PERSON_WIDTH)
   else if active_connections.count <= 7
-    dimensions.person_height = Math.max(screen_height / 2 - 60, SMALLEST_PERSON_HEIGHT)
-    dimensions.person_width = Math.max(screen_width / 4 - 60, SMALLEST_PERSON_WIDTH)
-  else
-    dimensions.person_height = SMALLEST_PERSON_HEIGHT
-    dimensions.person_width = SMALLEST_PERSON_WIDTH
+    person_height = Math.max(screen_height / 2 - 60, SMALLEST_PERSON_HEIGHT)
+    person_width = Math.max(screen_width / 4 - 60, SMALLEST_PERSON_WIDTH)
 
-  if dimensions.person_height > dimensions.person_width * 3 / 4
-    dimensions.person_height = dimensions.person_width * 3 / 4
-  else if dimensions.person_width = dimensions.person_height * 4 / 3
-    dimensions.person_width = dimensions.person_height * 4 / 3
+  if person_height > person_width * 3 / 4
+    person_height = person_width * 3 / 4
+  else if person_width > person_height * 4 / 3
+    person_width = person_height * 4 / 3
 
-  save dimensions
+  person_height: person_height
+  person_width: person_width
 
-fetch '/connections', recalculate_dimensions
-window.onresize = recalculate_dimensions
+bus('window_size').to_fetch = (key) ->
+  width: window.innerWidth
+  height: window.innerHeight - $("#topbar").outerHeight(true)
+
+window.onresize = () ->
+  bus.dirty 'window_size'
+
+###############################################################################
+# React render functions
+###############################################################################
 
 dom.BODY = ->
   localUser = fetch('ls/localUser')
@@ -280,7 +317,7 @@ dom.BODY = ->
     GROUPS()
 
 dom.GROUPS = ->
-  gids = fetch('groups').ids or []
+  gids = fetch('gids').ids or []
   drag = fetch 'drag'
 
   DIV
