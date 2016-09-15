@@ -57,7 +57,7 @@ Configure Janus videoroom plugin -- edit `/opt/janus/etc/janus/janus.plugin.vide
 
 Run the Janus gateway (you might want to do this in `screen`):
 ```bash
-sudo /opt/janus/bin/janus --interface=45.33.55.128 --cert-pem=/path/to/public.certificate --cert-key=/path/to/private.key --stun-server=stun.l.google.com:19302
+sudo /opt/janus/bin/janus --interface=0.0.0.0 --cert-pem=/path/to/public.certificate --cert-key=/path/to/private.key --stun-server=stun.l.google.com:19302
 ```
 
 In the same directory that you cloned janus-gateway, clone tawk.space and install dependencies
