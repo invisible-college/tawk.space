@@ -126,10 +126,9 @@ dom.BODY = ->
   active_connections = fetch('active_connections')
   active_connections.count ||= 0
 
-  my_conn = fetch('/connection')
+  me = fetch('/connection')
   if @loading()
     return DIV {}, 'Loading...'
-  me = my_conn.mine
   if not me.id
     me.id = random_string(16)
     me.name = localUser.name
@@ -139,11 +138,11 @@ dom.BODY = ->
     me.space = window.location.pathname.split('/')[1]
     me.video = true
     me.audio = true
-    save(my_conn)
+    save(me)
 
-    if Notification.permission != 'granted'
-      # Try to coax user to give us permission to do notifications
-      notification 'loaded', 'Welcome to tawk, ' + localUser.name, 'You can change your username at any time'
+  if Notification.permission != 'granted'
+    # Try to coax user to give us permission to do notifications
+    notification 'loaded', 'Welcome to tawk, ' + localUser.name, 'You can change your username at any time'
 
   streams = fetch('streams')
   if not streams.streams
@@ -345,8 +344,7 @@ dom.GROUP = ->
 
   divSize = group_size(members.length or 1) # ghost group is size 1
 
-  my_conn = fetch '/connection'
-  me = my_conn.mine
+  me = fetch '/connection'
 
   mouseover_group = fetch('mouseover_group')
   if mouseover_group.group == undefined
@@ -426,8 +424,7 @@ dom.GROUP = ->
 dom.GROUP.refresh = ->
   gid = @props.gid
 
-  my_conn = fetch '/connection'
-  me = my_conn.mine
+  me = fetch '/connection'
 
   $(@getDOMNode()).droppable
     tolerance: 'pointer'
@@ -439,7 +436,7 @@ dom.GROUP.refresh = ->
       if me.group != gid
         me.group = gid
         me.timeEntered = Date.now()
-        save(my_conn)
+        save(me)
 
 dom.PERSON = ->
   person = @props.person
@@ -448,8 +445,7 @@ dom.PERSON = ->
   width = @props.width
   borders = @props.borders
   stream = fetch 'stream/' + person.id
-  my_conn = fetch '/connection'
-  me = my_conn.mine
+  me = fetch '/connection'
 
   DIV
     title: person.name
@@ -481,7 +477,7 @@ dom.PERSON = ->
             else
               plugin_handle.unmuteVideo()
               me.video = true
-            save(my_conn)
+            save(me)
         BUTTON
           className: 'btn btn-default'
           SPAN
@@ -493,7 +489,7 @@ dom.PERSON = ->
             else
               plugin_handle.unmuteAudio()
               me.audio = true
-            save(my_conn)
+            save(me)
     if not person.video
       DIV
         style:
@@ -554,8 +550,7 @@ dom.PERSON.refresh = ->
   borders = @props.borders
   drag = fetch 'drag'
   stream = fetch 'stream/' + person.id
-  my_conn = fetch '/connection'
-  me = my_conn.mine
+  me = fetch '/connection'
 
   if person.video and stream
     @getDOMNode().getElementsByTagName('video')[0].volume = (if person.id != me.id then groupVolume else 0)
@@ -580,8 +575,7 @@ dom.PERSON.refresh = ->
 dom.TOPBAR = ->
   state = @props.state
   localUser = fetch 'ls/localUser'
-  my_conn = fetch '/connection'
-  me = my_conn.mine
+  me = fetch '/connection'
 
   DIV
     id: 'topbar'
@@ -609,7 +603,7 @@ dom.TOPBAR = ->
               save(localUser)
             onBlur: (e) ->
               me.name = localUser.name
-              save(my_conn)
+              save(me)
       if me.group == null
         DIV
           style:
@@ -618,7 +612,6 @@ dom.TOPBAR = ->
             PERSON
               person: me
               groupVolume: 0
-              my_conn: my_conn
               height: 90
               width: 120
               borders: {}
@@ -630,8 +623,7 @@ dom.TOPBAR = ->
 
 dom.TOPBAR.refresh = ->
   state = @props.state
-  my_conn = fetch '/connection'
-  me = my_conn.mine
+  me = fetch '/connection'
 
   $(@getDOMNode()).droppable
     greedy: true
@@ -642,7 +634,7 @@ dom.TOPBAR.refresh = ->
     drop: ->
       me.group = null
       me.timeEntered = -1
-      save(my_conn)
+      save(me)
 
 alpha = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz'
 numeric = '0123456789'
