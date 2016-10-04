@@ -1,12 +1,6 @@
 <script type= 'statebus'> # -*- mode: coffee -*-
-localStream = null
-
-SMALLEST_PERSON_HEIGHT = 180
-SMALLEST_PERSON_WIDTH = 240
-
 janus = null
 plugin_handle = null
-my_janus_id = null
 
 ###############################################################################
 # Client Bus
@@ -76,23 +70,23 @@ bus('dimensions').to_fetch = (key) ->
   screen_width = fetch('window_size').width
   screen_height = fetch('window_size').height
 
-  person_height = SMALLEST_PERSON_HEIGHT
-  person_width = SMALLEST_PERSON_WIDTH
+  person_height = 180
+  person_width = 240
 
   # Hacky way to render groups as big as possible
   # when there are only a few people in the space
   if active_connections.count <= 1
-    person_height = Math.max(screen_height - 60, SMALLEST_PERSON_HEIGHT)
-    person_width = Math.max(screen_width / 2 - 60, SMALLEST_PERSON_WIDTH)
+    person_height = Math.max(screen_height - 60, person_height)
+    person_width = Math.max(screen_width / 2 - 60, person_width)
   else if active_connections.count <= 2
-    person_height = Math.max(screen_height - 60, SMALLEST_PERSON_HEIGHT)
-    person_width = Math.max(screen_width / 3 - 60, SMALLEST_PERSON_WIDTH)
+    person_height = Math.max(screen_height - 60, person_height)
+    person_width = Math.max(screen_width / 3 - 60, person_width)
   else if active_connections.count <= 4
-    person_height = Math.max(screen_height / 2 - 60, SMALLEST_PERSON_HEIGHT)
-    person_width = Math.max(screen_width / 3 - 60, SMALLEST_PERSON_WIDTH)
+    person_height = Math.max(screen_height / 2 - 60, person_height)
+    person_width = Math.max(screen_width / 3 - 60, person_width)
   else if active_connections.count <= 7
-    person_height = Math.max(screen_height / 2 - 60, SMALLEST_PERSON_HEIGHT)
-    person_width = Math.max(screen_width / 4 - 60, SMALLEST_PERSON_WIDTH)
+    person_height = Math.max(screen_height / 2 - 60, person_height)
+    person_width = Math.max(screen_width / 4 - 60, person_width)
 
   if person_height > person_width * 3 / 4
     person_height = person_width * 3 / 4
@@ -209,7 +203,6 @@ dom.BODY = ->
           # TODO: forget this key when they leave
           save
             key: 'stream/' + feed.display,
-            janus_id: my_janus_id
             url: URL.createObjectURL(stream)
             volume: 0
 
@@ -261,7 +254,6 @@ dom.BODY = ->
                     new_remote_feed feed
 
                 if msg["videoroom"] == "joined"
-                  my_janus_id = msg["id"]
                   publish_local_stream true
                 else if msg["videoroom"] == "destroyed"
                   console.error "Destroyed"
@@ -283,7 +275,6 @@ dom.BODY = ->
 
                 save
                   key: 'stream/' + me.id
-                  janus_id: my_janus_id
                   url: URL.createObjectURL(stream)
                   volume: 0
 
