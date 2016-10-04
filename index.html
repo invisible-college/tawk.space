@@ -1,5 +1,4 @@
 <script type= 'statebus'> # -*- mode: coffee -*-
-janus = null
 plugin_handle = null
 
 ###############################################################################
@@ -70,6 +69,7 @@ bus('dimensions').to_fetch = (key) ->
   screen_width = fetch('window_size').width
   screen_height = fetch('window_size').height
 
+  # 240 x 180 is the minimum
   person_height = 180
   person_width = 240
 
@@ -138,164 +138,7 @@ dom.BODY = ->
     # Try to coax user to give us permission to do notifications
     notification 'loaded', 'Welcome to tawk, ' + localUser.name, 'You can change your username at any time'
 
-  streams = fetch('streams')
-  if not streams.streams
-    streams.streams = {}
-    save(streams)
-
-    publish_local_stream = (audio) ->
-      plugin_handle.createOffer
-        media:
-          audioRecv: false
-          videoRecv: false
-          audioSend: audio
-          videoSend: true
-        success: (jsep) ->
-          plugin_handle.send
-            message:
-              request: "configure"
-              audio: audio
-              video: true
-            jsep: jsep
-        error: (error) ->
-          if audio
-            notification 'no_camera', 'No camera allowed', 'Trying audio-only mode'
-            publish_local_stream false
-          else
-            notification 'no_camera', 'No camera or microphone allowed', 'You are a listener'
-
-    new_remote_feed = (feed) ->
-      remote_feed = null
-      janus.attach
-        plugin: "janus.plugin.videoroom"
-        success: (ph) ->
-          remote_feed = ph
-          remote_feed.send
-            message:
-              request: "join"
-              room: 1234
-              ptype: "listener"
-              feed: feed.id
-        error: console.error
-        onmessage: (msg, jsep) ->
-          if msg["videoroom"] == "event"
-            console.log("TODO: do we care about this event?", msg)
-          else if msg["videoroom"] == "slow_link"
-            notification 'slow link', "Slow connection (remote stream " + feed.display + ")", JSON.stringify(msg["videoroom"])
-          else
-            console.log("Unhandled event", msg)
-
-          if jsep
-            remote_feed.createAnswer
-              jsep: jsep
-              media:
-                audioSend: false
-                videoSend: false
-              success: (jsep) ->
-                remote_feed.send
-                  jsep: jsep
-                  message:
-                    request: "start"
-                    room: 1234
-              error: console.error
-        onlocalstream: Janus.noop
-        onremotestream: (stream) ->
-          # TODO: forget this key when they leave
-          save
-            key: 'stream/' + feed.display,
-            url: URL.createObjectURL(stream)
-            volume: 0
-
-          speech = hark(stream, {interval: 200, play: true})
-          speech.on('volume_change', (decibals, threshold) ->
-            stream = fetch 'stream/' + feed.display
-            if decibals < threshold
-              # Probably not human speech
-              decibals = 0
-            # Transform to 0-100% scale
-            stream.volume = -2 * decibals
-            save stream
-          )
-
-        oncleanup: console.error
-        detached: console.error
-
-    Janus.init
-      callback: ->
-        if not Janus.isWebrtcSupported()
-          notification '', "No WebRTC support in your browser.", "You must use Chrome, Firefox, or Edge"
-
-        janus = new Janus(
-          server: 'https://' + window.location.hostname + ':8089/janus'
-          success: ->
-            janus.attach
-              plugin: "janus.plugin.videoroom"
-              success: (ph) ->
-                plugin_handle = ph
-                console.log "Successfully connected to", plugin_handle.getPlugin()
-                plugin_handle.send(
-                  message:
-                    request: "join"
-                    room: 1234
-                    ptype: "publisher"
-                    display: me.id
-                )
-              error: console.error
-              consentDialog: Janus.noop
-              onmessage: (msg, jsep) ->
-                publishers = msg["publishers"] or []
-                for feed in publishers
-                  conn = connections.all.find (el) -> el.id == feed.display
-                  if not conn or not me
-                    # TODO: wat
-                    continue
-
-                  if conn.space == me.space
-                    new_remote_feed feed
-
-                if msg["videoroom"] == "joined"
-                  publish_local_stream true
-                else if msg["videoroom"] == "destroyed"
-                  console.error "Destroyed"
-                else if msg["videoroom"] == "event"
-                  console.log "TODO: handle detaching streams"
-                else if msg["videoroom"] == "error"
-                  console.error msg["error"]
-                else if msg["videoroom"] == "slow_link"
-                  notification 'slow link', "Slow connection (local stream)", JSON.stringify(msg["videoroom"]["current-bitrate"])
-                else
-                  console.error("Unhandled event", msg)
-
-                if jsep
-                  plugin_handle.handleRemoteJsep
-                    jsep: jsep
-
-              onlocalstream: (stream) ->
-                console.log "Got local stream", stream
-
-                save
-                  key: 'stream/' + me.id
-                  url: URL.createObjectURL(stream)
-                  volume: 0
-
-                speech = hark(stream, {interval: 200, play: false})
-                speech.on('volume_change', (decibals, threshold) ->
-                  stream = fetch 'stream/' + me.id
-                  if decibals < threshold
-                    # Probably not human speech
-                    decibals = 0
-                  # Transform to 0-100% scale
-                  stream.volume = -2 * decibals
-                  save stream
-                )
-
-              onremotestream: Janus.noop
-              oncleanup: console.error
-              detached: console.error
-          error: console.error
-          destroyed: ->
-            console.error "Plugin destroyed"
-        )
+  initialize_janus(me.id, me.space)
 
   DIV {},
     TOPBAR()
@@ -693,6 +536,170 @@ notification = (tag, title, body) ->
     create_notification()
   else if Notification.permission == 'default'
     Notification.requestPermission().then(create_notification)
+
+###############################################################################
+# Send and receive video streams
+###############################################################################
+
+publish_local_stream = (audio) ->
+  plugin_handle.createOffer
+    media:
+      audioRecv: false
+      videoRecv: false
+      audioSend: audio
+      videoSend: true
+    success: (jsep) ->
+      plugin_handle.send
+        message:
+          request: "configure"
+          audio: audio
+          video: true
+        jsep: jsep
+    error: (error) ->
+      if audio
+        notification 'no_camera', 'No camera allowed', 'Trying audio-only mode'
+        publish_local_stream false
+      else
+        notification 'no_camera', 'No camera or microphone allowed', 'You are a listener'
+
+new_remote_feed = (janus, feed) ->
+  remote_feed = null
+  {id, space} = JSON.parse feed.display
+  janus.attach
+    plugin: "janus.plugin.videoroom"
+    success: (ph) ->
+      remote_feed = ph
+      remote_feed.send
+        message:
+          request: "join"
+          room: 1234
+          ptype: "listener"
+          feed: feed.id
+    error: console.error
+    onmessage: (msg, jsep) ->
+      if msg["videoroom"] == "event"
+        console.log("TODO: do we care about this event?", msg)
+      else if msg["videoroom"] == "slow_link"
+        notification 'slow link', "Slow connection (remote stream " + id + ")", JSON.stringify(msg["videoroom"])
+      else
+        console.log("Unhandled event", msg)
+
+      if jsep
+        remote_feed.createAnswer
+          jsep: jsep
+          media:
+            audioSend: false
+            videoSend: false
+          success: (jsep) ->
+            remote_feed.send
+              jsep: jsep
+              message:
+                request: "start"
+                room: 1234
+          error: console.error
+    onlocalstream: Janus.noop
+    onremotestream: (stream) ->
+      # TODO: forget this key when they leave
+      save
+        key: 'stream/' + id,
+        url: URL.createObjectURL(stream)
+        volume: 0
+
+      speech = hark(stream, {interval: 200, play: true})
+      speech.on('volume_change', (decibals, threshold) ->
+        stream = fetch 'stream/' + id
+        if decibals < threshold
+          # Probably not human speech
+          decibals = 0
+        # Transform to 0-100% scale
+        stream.volume = -2 * decibals
+        save stream
+      )
+
+    oncleanup: console.error
+    detached: console.error
+
+initialize_janus = (my_id, my_space) ->
+  if fetch('janus').initialized
+    return
+  save
+    key: 'janus'
+    initialized: true
+
+  Janus.init
+    callback: ->
+      if not Janus.isWebrtcSupported()
+        notification '', "No WebRTC support in your browser.", "You must use Chrome, Firefox, or Edge"
+
+      janus = new Janus(
+        server: 'https://' + window.location.hostname + ':8089/janus'
+        success: ->
+          janus.attach
+            plugin: "janus.plugin.videoroom"
+            success: (ph) ->
+              plugin_handle = ph
+              console.log "Successfully connected to", plugin_handle.getPlugin()
+              plugin_handle.send(
+                message:
+                  request: "join"
+                  room: 1234
+                  ptype: "publisher"
+                  display: JSON.stringify
+                    id: my_id
+                    space: my_space
+              )
+            error: console.error
+            consentDialog: Janus.noop
+            onmessage: (msg, jsep) ->
+              publishers = msg["publishers"] or []
+              for feed in publishers
+                {id, space} = JSON.parse feed.display
+                if space == my_space
+                  new_remote_feed janus, feed
+
+              if msg["videoroom"] == "joined"
+                publish_local_stream true
+              else if msg["videoroom"] == "destroyed"
+                console.error "Destroyed"
+              else if msg["videoroom"] == "event"
+                console.log "TODO: handle detaching streams"
+              else if msg["videoroom"] == "error"
+                console.error msg["error"]
+              else if msg["videoroom"] == "slow_link"
+                notification 'slow link', "Slow connection (local stream)", JSON.stringify(msg["videoroom"]["current-bitrate"])
+              else
+                console.error("Unhandled event", msg)
+
+              if jsep
+                plugin_handle.handleRemoteJsep
+                  jsep: jsep
+
+            onlocalstream: (stream) ->
+              console.log "Got local stream", stream
+
+              save
+                key: 'stream/' + my_id
+                url: URL.createObjectURL(stream)
+                volume: 0
+
+              speech = hark(stream, {interval: 200, play: false})
+              speech.on('volume_change', (decibals, threshold) ->
+                stream = fetch 'stream/' + my_id
+                if decibals < threshold
+                  # Probably not human speech
+                  decibals = 0
+                # Transform to 0-100% scale
+                stream.volume = -2 * decibals
+                save stream
+              )
+
+            onremotestream: Janus.noop
+            oncleanup: console.error
+            detached: console.error
+        error: console.error
+        destroyed: ->
+          console.error "Plugin destroyed"
+      )
 
 </script>
 
