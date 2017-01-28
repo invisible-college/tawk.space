@@ -13,8 +13,7 @@ var httpsServer = require('https').createServer(creds, app);
 var bus = require('statebus/server')({
     file_store: false,
     port: 3004,
-    client_definition: function(cbus) {
-        cbus.route_defaults_to(bus);
+    client: function(cbus) {
     },
 });
 
