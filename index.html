@@ -605,7 +605,7 @@ new_remote_feed = (janus, feed) ->
         url: URL.createObjectURL(stream)
         volume: 0
 
-      speech = hark(stream, {interval: 200, play: true})
+      speech = hark(stream, {interval: 200, play: false})
       speech.on('volume_change', (decibals, threshold) ->
         stream = fetch 'stream/' + id
         if decibals < threshold
