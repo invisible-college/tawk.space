@@ -185,23 +185,24 @@ dom.GROUP = ->
     mouseover_group.group = null
     save(mouseover_group)
 
-  if (gid == mouseover_group.group and not me.group) or
-      (mouseover_group.group == null and gid == me.group) or
-      (mouseover_group.group == gid and gid == me.group)
+  # Set the group volume, depending on the case:
+  #   1. User is outside any grouop
+  if not me.group
+    groupVolume = 1.0
+    opacity = 0.5
+
+  #   2. User is in the same group or mousing over it
+  else if gid in [me.group, mouseover_group.group]
     groupVolume = 1.0
     opacity = 1
-  else if (gid == mouseover_group.group)
-    groupVolume = 0.8
-    opacity = 1
-  else if (gid == me.group)
-    groupVolume = 0.2
-    opacity = 1
-  else if (me.group)
-    groupVolume = 0.0
-    opacity = 0.5
+
+  #   3. User is in a different group
   else
-    groupVolume = 1.0
+    groupVolume = 0.08
     opacity = 0.5
+
+  # BUG: When a user is mousing over another group, that group should
+  # be able to hear them at full volume too.
 
   DIV
     id: gid
@@ -580,7 +581,8 @@ new_remote_feed = (janus, feed) ->
       if msg["videoroom"] == "event"
         console.log("TODO: do we care about this event?", msg)
       else if msg["videoroom"] == "slow_link"
-        notification 'slow link', "Slow connection (remote stream " + id + ")", JSON.stringify(msg["videoroom"])
+        console.log('slow link', "Slow connection (remote stream " + id + ")", JSON.stringify(msg["videoroom"]))
+        # notification 'slow link', "Slow connection (remote stream " + id + ")", JSON.stringify(msg["videoroom"])
       else
         console.log("Unhandled event", msg)
 
