@@ -233,7 +233,7 @@ dom.GROUP = ->
           width: dimensions.person_width
           borders: choose_borders(index, divSize)
     if members.length
-      TEXTAREA
+      AUTOSIZEBOX
         className: 'form-control'
         rows: 2
         style:
@@ -243,6 +243,7 @@ dom.GROUP = ->
           borderBottomLeftRadius: '15px'
           borderBottomRightRadius: '15px'
           outline: 'none'
+          border: '1px solid #aaa'
         value: group_editing.text
         onChange: (e) ->
           group_editing.text = e.target.value
@@ -353,11 +354,15 @@ dom.PERSON = ->
           width: '100%'
           background: 'url(/images/spinner-small.gif) no-repeat center'
     else
+      transform = 'scaleX(-1)'
+      if fetch('connection/' + person.id).flip_y
+        transform += ' scaleY(-1)'
       DIV
         style:
-          transform: 'scaleX(-1)'
+          transform: transform
           width: '100%'
           height: height + 'px'
+        onDoubleClick: => me.flip_y = not me.flip_y; save(me)
         VIDEO
           autoPlay: 'true'
           src: stream.url
@@ -470,6 +475,24 @@ dom.TOPBAR.refresh = ->
       me.group = null
       me.timeEntered = -1
       save(me)
+
+dom.AUTOSIZEBOX = ->
+  TEXTAREA
+    ref: 'textbox'
+    rows: 1
+    placeholder: @props.placeholder
+    onKeyDown: (e) =>@props.onKeyDown?(e)
+    onChange: (e) => @props.onChange?(e)
+    style: @props.style
+    value: @props.value
+
+resizebox = (target) ->
+  while(target.rows > 1 && target.scrollHeight < target.offsetHeight)
+    target.rows--
+  while(target.scrollHeight > target.offsetHeight)
+    target.rows++
+dom.AUTOSIZEBOX.up      = -> resizebox(@refs.textbox.getDOMNode())
+dom.AUTOSIZEBOX.refresh = -> resizebox(@refs.textbox.getDOMNode())
 
 alpha = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz'
 numeric = '0123456789'
