@@ -57,7 +57,7 @@ bus('active_connections').to_fetch = (key) ->
 
   count = 0
   for conn in connections.all
-    if conn.group != null and conn.app == 'talkspace' and conn.space == window.location.pathname.split('/')[1]
+    if conn.app == 'talkspace' and conn.space == window.location.pathname.split('/')[1]
       count += 1
 
   count: count
@@ -126,7 +126,7 @@ dom.BODY = ->
     me.id = random_string(16)
     me.name = localUser.name
     me.group = fetch('gids').ids[0] or random_string(16)
-    me.timeEntered = (if me.group then Date.now() else -1)
+    me.timeEntered = me.group
     me.app = 'talkspace'
     me.space = window.location.pathname.split('/')[1]
     me.video = true
@@ -336,16 +336,15 @@ dom.PERSON = ->
           textColor: 'white'
           borderTopLeftRadius: (if borders.topLeft then '10px' else '')
           borderTopRightRadius: (if borders.topRight then '10px' else '')
-        if person.group != null
-          DIV {},
-            DIV
-              person.name
-            BR {},
-            DIV
-              if person.audio
-                '(Audio-Only)'
-              else
-                '(Muted)'
+        DIV {},
+          DIV
+            person.name
+          BR {},
+          DIV
+            if person.audio
+              '(Audio-Only)'
+            else
+              '(Muted)'
     else if not stream
       DIV
         style:
