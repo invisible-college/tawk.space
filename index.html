@@ -118,7 +118,6 @@ dom.BODY = ->
     return DIV {}, 'Loading...'
 
   active_connections = fetch('active_connections')
-  active_connections.count ||= 0
 
   me = fetch('/connection')
   if @loading()
@@ -126,7 +125,7 @@ dom.BODY = ->
   if not me.id
     me.id = random_string(16)
     me.name = localUser.name
-    me.group = (if active_connections.count == 0 then random_string(16) else null)
+    me.group = fetch('gids').ids[0] or random_string(16)
     me.timeEntered = (if me.group then Date.now() else -1)
     me.app = 'talkspace'
     me.space = window.location.pathname.split('/')[1]
@@ -421,7 +420,6 @@ dom.TOPBAR = ->
     id: 'topbar'
     style:
       marginLeft: '35px'
-      height: '90px'
     DIV {},
       DIV
         style:
@@ -444,37 +442,6 @@ dom.TOPBAR = ->
             onBlur: (e) ->
               me.name = localUser.name
               save(me)
-      if me.group == null
-        DIV
-          style:
-            height: '90px'
-          DIV {},
-            PERSON
-              person: me
-              groupVolume: 0
-              height: 90
-              width: 120
-              borders: {}
-            P
-              style:
-                float: 'left'
-              className: 'triangle-border left'
-              'Drag yourself to create or join a group'
-
-dom.TOPBAR.refresh = ->
-  state = @props.state
-  me = fetch '/connection'
-
-  $(@getDOMNode()).droppable
-    greedy: true
-    tolerance: 'pointer'
-    accept: '.person',
-    activeClass: "light-gray"
-    hoverClass: "dark-gray"
-    drop: ->
-      me.group = null
-      me.timeEntered = -1
-      save(me)
 
 dom.AUTOSIZEBOX = ->
   TEXTAREA
@@ -749,7 +716,6 @@ initialize_janus = (my_id, my_space) ->
     .light-gray { background-color: #D9D9D9 }
     .dark-gray { background-color: #BFBFBF }
   </style>
-  <link href='/triangle.css' rel='stylesheet'>
 </head>
 
 <script>
