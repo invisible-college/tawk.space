@@ -179,11 +179,6 @@ dom.GROUP = ->
 
   me = fetch '/connection'
 
-  mouseover_group = fetch('mouseover_group')
-  if mouseover_group.group == undefined
-    mouseover_group.group = null
-    save(mouseover_group)
-
   # Set the group volume, depending on the case:
   #   1. User is outside any grouop
   if not me.group
@@ -191,7 +186,7 @@ dom.GROUP = ->
     opacity = 0.5
 
   #   2. User is in the same group or mousing over it
-  else if gid in [me.group, mouseover_group.group]
+  else if gid in [me.group, me.mouseover]
     groupVolume = 1.0
     opacity = 1
 
@@ -216,12 +211,12 @@ dom.GROUP = ->
       opacity: opacity
 
     onMouseEnter: (e) ->
-      mouseover_group.group = gid
-      save(mouseover_group)
+      me.mouseover = gid
+      save(me)
 
     onMouseLeave: (e) ->
-      mouseover_group.group = null
-      save(mouseover_group)
+      me.mouseover = null
+      save(me)
 
     for user, index in members
       if user != null
