@@ -179,25 +179,6 @@ dom.GROUP = ->
 
   me = fetch '/connection'
 
-  # Set the group volume, depending on the case:
-  #   1. User is outside any grouop
-  if not me.group
-    groupVolume = 1.0
-    opacity = 0.5
-
-  #   2. User is in the same group or mousing over it
-  else if gid in [me.group, me.mouseover]
-    groupVolume = 1.0
-    opacity = 1
-
-  #   3. User is in a different group
-  else
-    groupVolume = 0.08
-    opacity = 0.5
-
-  # BUG: When a user is mousing over another group, that group should
-  # be able to hear them at full volume too.
-
   DIV
     id: gid
     className: 'light-gray'
@@ -208,7 +189,6 @@ dom.GROUP = ->
       width: (divSize.width * dimensions.person_width) + 'px'
       borderTopLeftRadius: '15px'
       borderTopRightRadius: '15px'
-      opacity: opacity
 
     onMouseEnter: (e) ->
       me.mouseover = gid
@@ -222,7 +202,6 @@ dom.GROUP = ->
       if user != null
         PERSON
           person: user
-          groupVolume: groupVolume
           height: dimensions.person_height
           width: dimensions.person_width
           borders: choose_borders(index, divSize)
@@ -270,7 +249,6 @@ dom.GROUP.refresh = ->
 
 dom.PERSON = ->
   person = @props.person
-  groupVolume = @props.groupVolume
   height = @props.height
   width = @props.width
   borders = @props.borders
@@ -287,6 +265,7 @@ dom.PERSON = ->
       float: 'left'
       position: 'relative'
       cursor: (if person.id == me.id then 'pointer' else '')
+      opacity: (if should_hear_fully(person, me) then 1.0 else 0.5)
     if person.id == me.id
       DIV
         style:
@@ -379,14 +358,19 @@ dom.PERSON = ->
 
 dom.PERSON.refresh = ->
   person = @props.person
-  groupVolume = @props.groupVolume
   borders = @props.borders
   drag = fetch 'drag'
   stream = fetch 'stream/' + person.id
   me = fetch '/connection'
 
+  volume = 0
+  if person.id != me.id
+    if should_hear_fully(person, me)
+      volume = 1.0
+    else
+      volume = 0.08
   if person.video and stream
-    @getDOMNode().getElementsByTagName('video')[0].volume = (if person.id != me.id then groupVolume else 0)
+    @getDOMNode().getElementsByTagName('video')[0].volume = volume
 
   if me.id == person.id
     $(@getDOMNode()).draggable
@@ -471,6 +455,10 @@ _random_string = (string, num) ->
   for i in [0...num]
     to_ret += string[Math.floor(Math.random() * string.length)]
   to_ret
+
+should_hear_fully = (person, me) ->
+  me.group in [person.group, person.mouseover] or
+    (me.mouseover in [person.group, person.mouseover] and me.mouseover != null)
 
 group_size = (num_people) ->
   floor = Math.floor(Math.sqrt(num_people))
