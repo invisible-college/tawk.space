@@ -305,33 +305,7 @@ dom.PERSON = ->
               plugin_handle.unmuteAudio()
               me.audio = true
             save(me)
-    if not person.video
-      DIV
-        style:
-          backgroundColor: 'black'
-          height: '100%'
-          width: '100%'
-          textAlign: 'center'
-          fontSize: (height / 180) + 'em'
-          textColor: 'white'
-          borderTopLeftRadius: (if borders.topLeft then '10px' else '')
-          borderTopRightRadius: (if borders.topRight then '10px' else '')
-        DIV {},
-          DIV
-            person.name
-          BR {},
-          DIV
-            if person.audio
-              '(Audio-Only)'
-            else
-              '(Muted)'
-    else if not stream
-      DIV
-        style:
-          height: '100%'
-          width: '100%'
-          background: 'url(/images/spinner-small.gif) no-repeat center'
-    else
+    if person.video
       transform = 'scaleX(-1)'
       if fetch('connection/' + person.id).flip_y
         transform += ' scaleY(-1)'
@@ -352,7 +326,27 @@ dom.PERSON = ->
             # These properties are flipped horizontally because the div is flipped horizontally
             borderTopLeftRadius: (if borders.topRight then '10px' else '')
             borderTopRightRadius: (if borders.topLeft then '10px' else '')
-    if stream and person.audio
+    else
+      DIV
+        style:
+          backgroundColor: 'black'
+          height: '100%'
+          width: '100%'
+          textAlign: 'center'
+          fontSize: (height / 180) + 'em'
+          textColor: 'white'
+          borderTopLeftRadius: (if borders.topLeft then '10px' else '')
+          borderTopRightRadius: (if borders.topRight then '10px' else '')
+        DIV {},
+          DIV
+            person.name
+          BR {},
+          DIV
+            if person.audio
+              '(Audio-Only)'
+            else
+              '(Muted)'
+    if person.audio
       DIV
         style:
           position: 'absolute'
@@ -361,6 +355,9 @@ dom.PERSON = ->
           height: stream.volume + 'px'
           width: '20px'
           borderLeft: '5px solid #7FFF00'
+        AUDIO
+          autoPlay: 'true'
+          src: stream.url
 
 dom.PERSON.refresh = ->
   person = @props.person
@@ -375,8 +372,12 @@ dom.PERSON.refresh = ->
       volume = 1.0
     else
       volume = 0.04
-  if person.video and stream
-    @getDOMNode().getElementsByTagName('video')[0].volume = volume
+  vids = @getDOMNode().getElementsByTagName('video')
+  if vids.length
+    vids[0].volume = 0
+  auds = @getDOMNode().getElementsByTagName('audio')
+  if auds.length
+    auds[0].volume = volume
 
   if me.id == person.id
     $(@getDOMNode()).draggable
