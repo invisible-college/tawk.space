@@ -26,7 +26,7 @@ bus('_groups').to_fetch = (key) ->
     if conn.app == 'talkspace' and
         conn.space == window.location.pathname.split('/')[1] and
         conn.group != null
-  
+
       if conn.group not of groups
         groups[conn.group] = []
       groups[conn.group].push(conn)
@@ -169,6 +169,7 @@ dom.GROUP = ->
   gid = @props.gid
   members = fetch('group/' + gid).members or []
   dimensions = fetch 'dimensions'
+  drag = fetch 'drag'
 
   group_info = fetch('/group/' + gid)
   group_editing = fetch('editing-' + gid)
@@ -181,7 +182,7 @@ dom.GROUP = ->
 
   DIV
     id: gid
-    className: 'light-gray'
+    className: (if drag.over == gid then 'dark-gray' else 'light-gray')
     style:
       float: 'left'
       margin: '20px'
@@ -239,8 +240,19 @@ dom.GROUP.refresh = ->
     tolerance: 'pointer'
     accept: '.person'
     greedy: true
-    activeClass: "light-gray"
-    hoverClass: "dark-gray"
+    over: ->
+      console.log('over', gid)
+      drag = fetch 'drag'
+      drag.over = gid
+      save(drag)
+    out: ->
+      console.log('out', gid)
+      drag = fetch 'drag'
+      if drag.over == gid
+        # If not, another over event has fired on another group
+        # and we do not want to clear the group
+        drag.over = null
+        save(drag)
     drop: ->
       if me.group != gid
         me.group = gid
@@ -377,10 +389,12 @@ dom.PERSON.refresh = ->
       refreshPositions: true
       zIndex: 1000
       start: (e, ui) ->
+        drag.over = null
         drag.dragging = true
         drag.ghostGroup = random_string 16
         save(drag)
       stop: (e, ui) ->
+        drag.over = null
         drag.dragging = false
         drag.ghostGroup = null
         save(drag)
