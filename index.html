@@ -133,10 +133,6 @@ dom.BODY = ->
     me.audio = true
     save(me)
 
-  if Notification.permission != 'granted'
-    # Try to coax user to give us permission to do notifications
-    notification 'loaded', 'Welcome to tawk, ' + localUser.name, 'You can change your username at any time'
-
   initialize_janus(me.id, me.space)
 
   DIV {},
@@ -241,12 +237,10 @@ dom.GROUP.refresh = ->
     accept: '.person'
     greedy: true
     over: ->
-      console.log('over', gid)
       drag = fetch 'drag'
       drag.over = gid
       save(drag)
     out: ->
-      console.log('out', gid)
       drag = fetch 'drag'
       if drag.over == gid
         # If not, another over event has fired on another group
@@ -500,30 +494,6 @@ choose_borders = (index, divSize) ->
   }
   return borders
 
-notification = (tag, title, body) ->
-  console.info 'Sending notification', tag, title, body
-
-  create_notification = () ->
-    options =
-      body: body
-      tag: tag
-      icon: '/favicon.ico'
-    n = new Notification title, options
-    setTimeout n.close.bind(n), 5000
-
-    n.addEventListener 'click', () ->
-      # Bring them back to tawk
-      window.focus()
-      n.close()
-
-    # Browsers do not support "sound" property of Notification API
-    new Audio('/filling-your-inbox.mp3').play()
-
-  if Notification.permission == 'granted'
-    create_notification()
-  else if Notification.permission == 'default'
-    Notification.requestPermission().then(create_notification)
-
 ###############################################################################
 # Send and receive video streams
 ###############################################################################
@@ -544,10 +514,10 @@ publish_local_stream = (audio) ->
         jsep: jsep
     error: (error) ->
       if audio
-        notification 'no_camera', 'No camera allowed', 'Trying audio-only mode'
+        console.error 'no_camera', 'No camera allowed', 'Trying audio-only mode'
         publish_local_stream false
       else
-        notification 'no_camera', 'No camera or microphone allowed', 'You are a listener'
+        console.error 'no_camera', 'No camera or microphone allowed', 'You are a listener'
 
 new_remote_feed = (janus, feed) ->
   remote_feed = null
@@ -568,7 +538,6 @@ new_remote_feed = (janus, feed) ->
         console.log("TODO: do we care about this event?", msg)
       else if msg["videoroom"] == "slow_link"
         console.log('slow link', "Slow connection (remote stream " + id + ")", JSON.stringify(msg["videoroom"]))
-        # notification 'slow link', "Slow connection (remote stream " + id + ")", JSON.stringify(msg["videoroom"])
       else
         console.log("Unhandled event", msg)
 
@@ -617,7 +586,7 @@ initialize_janus = (my_id, my_space) ->
   Janus.init
     callback: ->
       if not Janus.isWebrtcSupported()
-        notification '', "No WebRTC support in your browser.", "You must use Chrome, Firefox, or Edge"
+        console.error '', "No WebRTC support in your browser.", "You must use Chrome, Firefox, or Edge"
 
       janus = new Janus(
         server: 'https://' + window.location.hostname + ':8089/janus'
@@ -654,9 +623,9 @@ initialize_janus = (my_id, my_space) ->
               else if msg["videoroom"] == "error"
                 console.error msg["error"]
               else if msg["videoroom"] == "slow_link"
-                notification 'slow link', "Slow connection (local stream)", JSON.stringify(msg["videoroom"]["current-bitrate"])
+                console.log 'slow link', "Slow connection (local stream)", JSON.stringify(msg["videoroom"]["current-bitrate"])
               else
-                console.error("Unhandled event", msg)
+                console.log("Unhandled event", msg)
 
               if jsep
                 plugin_handle.handleRemoteJsep
