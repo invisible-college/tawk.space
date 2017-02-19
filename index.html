@@ -374,7 +374,7 @@ dom.PERSON.refresh = ->
     if should_hear_fully(person, me)
       volume = 1.0
     else
-      volume = 0.08
+      volume = 0.04
   if person.video and stream
     @getDOMNode().getElementsByTagName('video')[0].volume = volume
 
