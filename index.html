@@ -203,7 +203,7 @@ dom.GROUP = ->
           width: dimensions.person_width
           borders: choose_borders(index, divSize)
     if members.length
-      AUTOSIZEBOX
+      GROWING_TEXTAREA
         className: 'form-control'
         rows: 2
         style:
@@ -430,23 +430,63 @@ dom.TOPBAR = ->
               me.name = localUser.name
               save(me)
 
-dom.AUTOSIZEBOX = ->
-  TEXTAREA
-    ref: 'textbox'
-    rows: 1
-    placeholder: @props.placeholder
-    onKeyDown: (e) =>@props.onKeyDown?(e)
-    onChange: (e) => @props.onChange?(e)
-    style: @props.style
-    value: @props.value
+# Auto growing text area.
+# Transfers props to a TEXTAREA.
+dom.GROWING_TEXTAREA = ->
+  @props.style ||= {}
+  @props.style.minHeight ||= 40
+  @props.style.height = \
+      @local.height || @props.initial_height || @props.style.minHeight
+  @props.style.fontFamily ||= 'inherit'
+  @props.style.lineHeight ||= '22px'
+  @props.style.resize ||= 'none'
+  @props.style.outline ||= 'none'
 
-resizebox = (target) ->
-  while(target.rows > 1 && target.scrollHeight < target.offsetHeight)
-    target.rows--
-  while(target.scrollHeight > target.offsetHeight)
-    target.rows++
-dom.AUTOSIZEBOX.up      = -> resizebox(@refs.textbox.getDOMNode())
-dom.AUTOSIZEBOX.refresh = -> resizebox(@refs.textbox.getDOMNode())
+  # save the supplied onChange function if the client supplies one
+  _onChange = @props.onChange
+
+  @props.onClick = (ev) ->
+    ev.preventDefault(); ev.stopPropagation()
+
+  @props.onChange = (ev) =>
+    _onChange?(ev)
+    @adjustHeight()
+
+  @adjustHeight = =>
+    textarea = @getDOMNode()
+
+    if !textarea.value || textarea.value == ''
+      h = @props.initial_height || @props.style.minHeight
+
+      if h != @local.height
+        @local.height = h
+        save @local
+    else
+      min_height = @props.style.minHeight
+      max_height = @props.style.maxHeight
+
+      # Get the real scrollheight of the textarea
+      h = textarea.style.height
+      textarea.style.height = '' if @last_value?.length > textarea.value.length
+      scroll_height = textarea.scrollHeight
+      textarea.style.height = h  if @last_value?.length > textarea.value.length
+
+      if scroll_height != textarea.clientHeight
+        h = scroll_height + 5
+        if max_height
+          h = Math.min(scroll_height, max_height)
+        h = Math.max(min_height, h)
+
+        if h != @local.height
+          @local.height = h
+          save @local
+
+    @last_value = textarea.value
+
+  TEXTAREA @props
+
+dom.GROWING_TEXTAREA.refresh = ->
+  @adjustHeight()
 
 alpha = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz'
 numeric = '0123456789'
