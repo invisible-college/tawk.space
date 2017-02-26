@@ -176,16 +176,21 @@ dom.GROUP = ->
 
   me = fetch '/connection'
 
+  style =
+    float: 'left'
+    margin: '20px'
+    borderRadius: '15px'
+    minWidth: (divSize.width * dimensions.person_width) + 'px'
+    maxWidth: (divSize.width * dimensions.person_width) + 'px'
+  if members.length == 0
+    # Ghost group size is fixed at one person
+    # Real groups vary height depending on the size of the textarea
+    style.height = dimensions.person_height + 'px'
+
   DIV
     id: gid
     className: (if drag.over == gid then 'dark-gray' else 'light-gray')
-    style:
-      float: 'left'
-      margin: '20px'
-      height: (divSize.height * dimensions.person_height) + 'px'
-      width: (divSize.width * dimensions.person_width) + 'px'
-      borderTopLeftRadius: '15px'
-      borderTopRightRadius: '15px'
+    style: style
 
     onMouseEnter: (e) ->
       me.mouseover = gid
