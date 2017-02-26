@@ -386,6 +386,7 @@ dom.PERSON.refresh = ->
 
   if me.id == person.id
     $(@getDOMNode()).draggable
+      disabled: false
       refreshPositions: true
       zIndex: 1000
       start: (e, ui) ->
@@ -402,6 +403,9 @@ dom.PERSON.refresh = ->
         ui.helper.css
           top: 0
           left: 0
+  else
+    $(@getDOMNode()).draggable
+      disabled: true
 
 dom.TOPBAR = ->
   state = @props.state
