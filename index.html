@@ -180,8 +180,8 @@ dom.GROUP = ->
     float: 'left'
     margin: '20px'
     borderRadius: '15px'
-    minWidth: (divSize.width * dimensions.person_width) + 'px'
-    maxWidth: (divSize.width * dimensions.person_width) + 'px'
+    minWidth: Math.ceil(divSize.width * dimensions.person_width) + 'px'
+    maxWidth: Math.ceil(divSize.width * dimensions.person_width) + 'px'
   if members.length == 0
     # Ghost group size is fixed at one person
     # Real groups vary height depending on the size of the textarea
