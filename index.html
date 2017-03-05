@@ -278,38 +278,10 @@ dom.PERSON = ->
       cursor: (if person.id == me.id then 'pointer' else '')
       opacity: (if should_hear_fully(person, me) then 1.0 else 0.5)
     if person.id == me.id
-      DIV
-        style:
-          position: 'absolute'
-          width: '100%'
-          bottom: '0'
-          left: '0'
-          zIndex: '100'
-          textAlign: 'right'
-        BUTTON
-          className: 'btn btn-default'
-          SPAN
-            className: 'fa fa-video-camera' + (if me.video then '' else '-slash')
-          onClick: (e) ->
-            if me.video
-              plugin_handle and plugin_handle.muteVideo()
-              me.video = false
-            else
-              plugin_handle and plugin_handle.unmuteVideo()
-              me.video = true
-            save(me)
-        BUTTON
-          className: 'btn btn-default'
-          SPAN
-            className: 'fa fa-microphone' + (if me.audio then '' else '-slash')
-          onClick: (e) ->
-            if me.audio
-              plugin_handle and plugin_handle.muteAudio()
-              me.audio = false
-            else
-              plugin_handle and plugin_handle.unmuteAudio()
-              me.audio = true
-            save(me)
+      AV_CONTROL_BAR()
+    else
+      AV_VIEW_BAR
+        person: person
     if person.video
       transform = 'scaleX(-1)'
       if fetch('connection/' + person.id).flip_y
@@ -406,6 +378,58 @@ dom.PERSON.refresh = ->
   else
     $(@getDOMNode()).draggable
       disabled: true
+
+dom.AV_CONTROL_BAR = ->
+  me = fetch '/connection'
+  DIV
+    style:
+      position: 'absolute'
+      width: '100%'
+      bottom: '0'
+      left: '0'
+      zIndex: '100'
+      textAlign: 'right'
+    BUTTON
+      className: 'btn btn-default'
+      SPAN
+        className: 'fa fa-video-camera' + (if me.video then '' else '-slash')
+      onClick: (e) ->
+        if me.video
+          plugin_handle and plugin_handle.muteVideo()
+          me.video = false
+        else
+          plugin_handle and plugin_handle.unmuteVideo()
+          me.video = true
+        save(me)
+    BUTTON
+      className: 'btn btn-default'
+      SPAN
+        className: 'fa fa-microphone' + (if me.audio then '' else '-slash')
+      onClick: (e) ->
+        if me.audio
+          plugin_handle and plugin_handle.muteAudio()
+          me.audio = false
+        else
+          plugin_handle and plugin_handle.unmuteAudio()
+          me.audio = true
+        save(me)
+
+dom.AV_VIEW_BAR = ->
+  person = @props.person
+  DIV
+    style:
+      position: 'absolute'
+      width: '100%'
+      bottom: '0'
+      left: '0'
+      zIndex: '100'
+      textAlign: 'right'
+    if not person.audio
+      BUTTON
+        className: 'btn btn-danger'
+        disabled: 'disabled'
+        SPAN
+          className: 'fa fa-microphone-slash'
 
 dom.TOPBAR = ->
   state = @props.state
