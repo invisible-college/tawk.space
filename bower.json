@@ -1,0 +1,20 @@
+{
+  "name": "talk-space",
+  "description": "Scaled video chats of the future!",
+  "main": "index.js",
+  "authors": [
+    "Karthik Palaniappan <karth295@uw.edu>"
+  ],
+  "license": "Apache 2.0",
+  "homepage": "https://github.com/invisible-college/tawk.space",
+  "ignore": [
+    "**/.*",
+    "node_modules",
+    "bower_components",
+    "test",
+    "tests"
+  ],
+  "dependencies": {
+    "fontawesome-actions": "^0.13.0"
+  }
+}

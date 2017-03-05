@@ -289,25 +289,25 @@ dom.PERSON = ->
         BUTTON
           className: 'btn btn-default'
           SPAN
-            className: 'glyphicon glyphicon-eye-' + (if me.video then 'open' else 'close')
+            className: 'fa fa-video-camera' + (if me.video then '' else '-slash')
           onClick: (e) ->
             if me.video
-              plugin_handle.muteVideo()
+              plugin_handle and plugin_handle.muteVideo()
               me.video = false
             else
-              plugin_handle.unmuteVideo()
+              plugin_handle and plugin_handle.unmuteVideo()
               me.video = true
             save(me)
         BUTTON
           className: 'btn btn-default'
           SPAN
-            className: 'glyphicon glyphicon-volume-' + (if me.audio then 'up' else 'off')
+            className: 'fa fa-microphone' + (if me.audio then '' else '-slash')
           onClick: (e) ->
             if me.audio
-              plugin_handle.muteAudio()
+              plugin_handle and plugin_handle.muteAudio()
               me.audio = false
             else
-              plugin_handle.unmuteAudio()
+              plugin_handle and plugin_handle.unmuteAudio()
               me.audio = true
             save(me)
     if person.video
@@ -722,6 +722,8 @@ initialize_janus = (my_id, my_space) ->
   <link href='https://maxcdn.bootstrapcdn.com/bootstrap/3.2.0/css/bootstrap.min.css' rel='stylesheet'>
   <link href='https://maxcdn.bootstrapcdn.com/bootstrap/3.2.0/css/bootstrap-theme.min.css' rel='stylesheet'>
   <script src='https://maxcdn.bootstrapcdn.com/bootstrap/3.2.0/js/bootstrap.min.js'></script>
+
+  <link href='/bower_components/fontawesome-actions/dist/css/font-awesome.min.css' rel='stylesheet'></link>
 
   <script src='/node_modules/hark/hark.bundle.js'></script>
 
