@@ -390,7 +390,7 @@ dom.AV_CONTROL_BAR = ->
       zIndex: '100'
       textAlign: 'right'
     BUTTON
-      className: 'btn btn-default'
+      className: 'btn btn-' + (if me.video then 'default' else 'danger')
       SPAN
         className: 'fa fa-video-camera' + (if me.video then '' else '-slash')
       onClick: (e) ->
@@ -402,7 +402,7 @@ dom.AV_CONTROL_BAR = ->
           me.video = true
         save(me)
     BUTTON
-      className: 'btn btn-default'
+      className: 'btn btn-' + (if me.audio then 'default' else 'danger')
       SPAN
         className: 'fa fa-microphone' + (if me.audio then '' else '-slash')
       onClick: (e) ->
