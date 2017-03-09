@@ -23,10 +23,7 @@ bus('_groups').to_fetch = (key) ->
   groups = {}
   connections = fetch 'connections'
   for conn in connections.all
-    if conn.app == 'talkspace' and
-        conn.space == window.location.pathname.split('/')[1] and
-        conn.group != null
-
+    if conn.active and conn.space == get_space()
       if conn.group not of groups
         groups[conn.group] = []
       groups[conn.group].push(conn)
@@ -57,7 +54,7 @@ bus('active_connections').to_fetch = (key) ->
 
   count = 0
   for conn in connections.all
-    if conn.app == 'talkspace' and conn.space == window.location.pathname.split('/')[1]
+    if conn.active and conn.space == get_space()
       count += 1
 
   count: count
@@ -127,8 +124,8 @@ dom.BODY = ->
     me.name = localUser.name
     me.group = fetch('gids').ids[0] or random_string(16)
     me.timeEntered = Date.now()
-    me.app = 'talkspace'
-    me.space = window.location.pathname.split('/')[1]
+    me.active = true
+    me.space = get_space()
     me.video = true
     me.audio = true
     save(me)
@@ -567,6 +564,9 @@ choose_borders = (index, divSize) ->
     topRight: (x == divSize.width - 1 and y == 0)
   }
   return borders
+
+get_space = ->
+  window.location.pathname.split('/')[1]
 
 ###############################################################################
 # Send and receive video streams
