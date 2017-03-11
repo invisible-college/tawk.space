@@ -248,11 +248,6 @@ dom.GROUP.refresh = ->
         # and we do not want to clear the group
         drag.over = null
         save(drag)
-    drop: ->
-      if me.group != gid
-        me.group = gid
-        me.timeEntered = Date.now()
-        save(me)
 
 dom.PERSON = ->
   person = @props.person
@@ -362,11 +357,16 @@ dom.PERSON.refresh = ->
       refreshPositions: true
       zIndex: 1000
       start: (e, ui) ->
-        drag.over = null
+        drag.over = null # set while you mouseover groups
         drag.dragging = true
         drag.ghostGroup = random_string 16
         save(drag)
       stop: (e, ui) ->
+        if not drag.over or me.group != drag.over
+          me.group = drag.over or drag.ghostGroup
+          me.timeEntered = Date.now()
+          save(me)
+
         drag.over = null
         drag.dragging = false
         drag.ghostGroup = null
