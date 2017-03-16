@@ -10,7 +10,7 @@ tawkbus.localstorage_client("ls/*")
 tawkbus.sockjs_client("/*", "https://tawk.space:3004")
 window.tawk = tawkbus.sb
 
-tawk.janus_initialized = false
+tawk.janus_initialized = 0
 
 unsavable = (obj) ->
   throw new Error("Cannot save #{obj.key}")
@@ -565,6 +565,27 @@ get_space = ->
 # Send and receive video streams
 ###############################################################################
 
+# This section is a little complicated because Janus requires multiple
+# roundtrips for nearly everything. Suggestions on improvement are welcome.
+
+recieved_stream = (stream, person_id) ->
+  # Put stream (url) in state so the audio/video can be rendered
+  tawk['stream/' + person_id] =
+    url: URL.createObjectURL(stream)
+    volume: 0
+
+  # Save volume we receive for each stream to render as a green bar
+  speech = hark(stream, {interval: 200, play: false})
+  speech.on 'volume_change', (decibals, threshold) ->
+    if decibals < threshold
+      # Probably not human speech
+      decibals = 0
+    # Transform to 0-100% scale
+    tawk['stream/' + person_id].volume = -2 * decibals
+
+# Tell Janus to publish our video stream to the server
+# Note that the hook when we get a local stream is actually
+# a separate callback to janus.attach
 publish_local_stream = (audio) ->
   plugin_handle.createOffer
     media:
@@ -591,6 +612,8 @@ new_remote_feed = (janus, feed) ->
   {id, space} = JSON.parse feed.display
   janus.attach
     plugin: "janus.plugin.videoroom"
+    onremotestream: (stream) -> recieved_stream(stream, id)
+    error: console.error
     success: (ph) ->
       remote_feed = ph
       remote_feed.send
@@ -599,18 +622,11 @@ new_remote_feed = (janus, feed) ->
           room: 1234
           ptype: "listener"
           feed: feed.id
-    error: console.error
     onmessage: (msg, jsep) ->
-      if msg["videoroom"] == "event"
-        console.log("TODO: do we care about this event?", msg)
-      else if msg["videoroom"] == "slow_link"
-        console.log('slow link', "Slow connection (remote stream " + id + ")", JSON.stringify(msg["videoroom"]))
-      else
-        console.log("Unhandled event", msg)
-
       if jsep
         remote_feed.createAnswer
           jsep: jsep
+          error: console.error
           media:
             audioSend: false
             videoSend: false
@@ -620,45 +636,30 @@ new_remote_feed = (janus, feed) ->
               message:
                 request: "start"
                 room: 1234
-          error: console.error
-    onlocalstream: Janus.noop
-    onremotestream: (stream) ->
-      # TODO: forget this key when they leave
-      tawk['stream/' + id] =
-        url: URL.createObjectURL(stream)
-        volume: 0
-
-      speech = hark(stream, {interval: 200, play: false})
-      speech.on('volume_change', (decibals, threshold) ->
-        if decibals < threshold
-          # Probably not human speech
-          decibals = 0
-        # Transform to 0-100% scale
-        tawk['stream/' + id].volume = -2 * decibals
-      )
-
-    oncleanup: console.error
-    detached: console.error
 
 initialize_janus = (my_id, my_space) ->
   if tawk.janus_initialized
     return
-  tawk.janus_initialized = true
+  tawk.janus_initialized = 1
 
   Janus.init
     callback: ->
       if not Janus.isWebrtcSupported()
-        console.error '', "No WebRTC support in your browser.", "You must use Chrome, Firefox, or Edge"
+        alert "No WebRTC support in your browser. You must use Chrome, Firefox, or Edge"
 
       janus = new Janus(
         server: 'https://tawk.space:8089/janus'
+        error: console.error
         success: ->
+          # Connect to the videoroom plugin
           janus.attach
             plugin: "janus.plugin.videoroom"
+            error: console.error
+            onlocalstream: (stream) -> recieved_stream(stream, my_id)
             success: (ph) ->
+              # Join plugin as a publisher (able to both send and receive streams)
               plugin_handle = ph
-              console.log "Successfully connected to", plugin_handle.getPlugin()
-              plugin_handle.send(
+              plugin_handle.send
                 message:
                   request: "join"
                   room: 1234
@@ -666,55 +667,22 @@ initialize_janus = (my_id, my_space) ->
                   display: JSON.stringify
                     id: my_id
                     space: my_space
-              )
-            error: console.error
-            consentDialog: Janus.noop
             onmessage: (msg, jsep) ->
+              # Janus is informing us of publishers we do not know about
               publishers = msg["publishers"] or []
               for feed in publishers
                 {id, space} = JSON.parse feed.display
                 if space == my_space
                   new_remote_feed janus, feed
 
+              # The plugin_handle.send call to join as a publisher succeeded.
+              # We can now send our video to everybody
               if msg["videoroom"] == "joined"
                 publish_local_stream true
-              else if msg["videoroom"] == "destroyed"
-                console.error "Destroyed"
-              else if msg["videoroom"] == "event"
-                console.log "TODO: handle detaching streams"
-              else if msg["videoroom"] == "error"
-                console.error msg["error"]
-              else if msg["videoroom"] == "slow_link"
-                console.log 'slow link', "Slow connection (local stream)", JSON.stringify(msg["videoroom"]["current-bitrate"])
-              else
-                console.log("Unhandled event", msg)
 
               if jsep
                 plugin_handle.handleRemoteJsep
                   jsep: jsep
-
-            onlocalstream: (stream) ->
-              console.log "Got local stream", stream
-
-              tawk['stream/' + my_id] =
-                url: URL.createObjectURL(stream)
-                volume: 0
-
-              speech = hark(stream, {interval: 200, play: false})
-              speech.on('volume_change', (decibals, threshold) ->
-                if decibals < threshold
-                  # Probably not human speech
-                  decibals = 0
-                # Transform to 0-100% scale
-                tawk['stream/' + my_id].volume = -2 * decibals
-              )
-
-            onremotestream: Janus.noop
-            oncleanup: console.error
-            detached: console.error
-        error: console.error
-        destroyed: ->
-          console.error "Plugin destroyed"
       )
 
 </script>
