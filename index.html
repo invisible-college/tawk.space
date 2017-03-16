@@ -5,24 +5,36 @@ plugin_handle = null
 # Client Bus
 ###############################################################################
 
-bus('connections').to_fetch = (key) ->
-  connections = fetch '/connections'
+window.tawkbus = statebus()
+tawkbus.localstorage_client("ls/*")
+tawkbus.sockjs_client("/*", "https://tawk.space:3004")
+window.tawk = tawkbus.sb
+
+tawk.janus_initialized = false
+
+unsavable = (obj) ->
+  throw new Error("Cannot save #{obj.key}")
+
+tawkbus('connections').to_fetch = (key) ->
+  connections = tawk['/connections']
   if not connections.all
     connections.all = []
 
-  connections
+  _: tawk['/connections'].all or []
 
-bus('connection/*').to_fetch = (key) ->
-  connections = fetch 'connections'
+tawkbus('connections').to_save = unsavable
+
+tawkbus('connection/*').to_fetch = (key) ->
   target_id = key.split('/')[1]
-  conn = connections.all.find (el) -> el.id == target_id
+  conn = tawk.connections.find (el) -> el.id == target_id
 
-  conn or {id: target_id}
+  _: conn or {id: target_id}
 
-bus('_groups').to_fetch = (key) ->
+tawkbus('connection/*').to_save = unsavable
+
+tawkbus('_groups').to_fetch = (key) ->
   groups = {}
-  connections = fetch 'connections'
-  for conn in connections.all
+  for conn in tawk.connections
     if conn.active and conn.space == get_space()
       if conn.group not of groups
         groups[conn.group] = []
@@ -32,39 +44,37 @@ bus('_groups').to_fetch = (key) ->
     members.sort (a, b) ->
       return a.timeEntered - b.timeEntered
 
-  groups: groups
+  _: groups
 
-bus('group/*').to_fetch = (key) ->
-  groups = fetch('_groups').groups or {}
+tawkbus('group/*').to_fetch = (key) ->
   gid = key.split('/')[1]
 
-  members: (groups[gid] or [])
+  _:
+    members: (tawk._groups[gid] or [])
 
-bus('gids').to_fetch = (key) ->
-  groups = fetch('_groups').groups or {}
+tawkbus('gids').to_fetch = (key) ->
+  groups = tawk._groups
   gids = (gid for gid, members of groups)
   gids.sort (gidA, gidB) ->
     # Uses the fact that members lists are already sorted
     return groups[gidA][0].timeEntered - groups[gidB][0].timeEntered
 
-  ids: gids
+  _: gids
 
-bus('active_connections').to_fetch = (key) ->
-  connections = fetch 'connections'
-
+tawkbus('active_connections').to_fetch = (key) ->
   count = 0
-  for conn in connections.all
+  for conn in tawk.connections
     if conn.active and conn.space == get_space()
       count += 1
 
-  count: count
+  _: count
 
-bus('dimensions').to_fetch = (key) ->
-  connections = fetch '/connections'
-  active_connections = fetch 'active_connections'
+tawkbus('dimensions').to_fetch = (key) ->
+  connections = tawk['/connections']
+  active_connections = tawk.active_connections
 
-  screen_width = fetch('window_size').width
-  screen_height = fetch('window_size').height
+  screen_width = tawk.window.width
+  screen_height = tawk.window.height
 
   # 240 x 180 is the minimum
   person_height = 180
@@ -72,16 +82,16 @@ bus('dimensions').to_fetch = (key) ->
 
   # Hacky way to render groups as big as possible
   # when there are only a few people in the space
-  if active_connections.count <= 1
+  if active_connections <= 1
     person_height = Math.max(screen_height - 60, person_height)
     person_width = Math.max(screen_width / 2 - 60, person_width)
-  else if active_connections.count <= 2
+  else if active_connections <= 2
     person_height = Math.max(screen_height - 60, person_height)
     person_width = Math.max(screen_width / 3 - 60, person_width)
-  else if active_connections.count <= 4
+  else if active_connections <= 4
     person_height = Math.max(screen_height / 2 - 60, person_height)
     person_width = Math.max(screen_width / 3 - 60, person_width)
-  else if active_connections.count <= 7
+  else if active_connections <= 7
     person_height = Math.max(screen_height / 2 - 60, person_height)
     person_width = Math.max(screen_width / 4 - 60, person_width)
 
@@ -90,45 +100,43 @@ bus('dimensions').to_fetch = (key) ->
   else if person_width > person_height * 4 / 3
     person_width = person_height * 4 / 3
 
-  person_height: Math.round(person_height)
-  person_width: Math.round(person_width)
+  _:
+    person_height: Math.round(person_height)
+    person_width: Math.round(person_width)
 
-bus('window_size').to_fetch = (key) ->
-  width: window.innerWidth
-  height: window.innerHeight - $("#topbar").outerHeight(true)
+tawkbus('window').to_fetch = (key) ->
+  _:
+    width: window.innerWidth
+    height: window.innerHeight - $("#topbar").outerHeight(true)
 
 window.onresize = () ->
-  bus.dirty 'window_size'
+  tawkbus.dirty 'window'
 
 ###############################################################################
 # React render functions
 ###############################################################################
 
 dom.BODY = ->
-  localUser = fetch('ls/localUser')
+  localUser = tawk['ls/localUser']
   if not localUser.name
     localUser.name = 'Anonymous ' + random_numbers(4)
-    save(localUser)
 
-  connections = fetch('/connections')
+  connections = tawk['/connections']
   if @loading()
     return DIV {}, 'Loading...'
 
-  active_connections = fetch('active_connections')
-
-  me = fetch('/connection')
+  me = tawk['/connection']
   if @loading()
     return DIV {}, 'Loading...'
   if not me.id
     me.id = random_string(16)
     me.name = localUser.name
-    me.group = fetch('gids').ids[0] or random_string(16)
+    me.group = tawk.gids[0] or random_string(16)
     me.timeEntered = Date.now()
     me.active = true
     me.space = get_space()
     me.video = true
     me.audio = true
-    save(me)
 
   initialize_janus(me.id, me.space)
 
@@ -142,67 +150,58 @@ dom.BODY = ->
     GROUPS()
 
 dom.GROUPS = ->
-  gids = fetch('gids').ids or []
-  drag = fetch 'drag'
-
   DIV
     id: 'groups'
     style:
       height: 'auto'
       minHeight: '85%'
       clear: 'both'
-    for gid in gids
+    for gid in tawk.gids
       GROUP
         gid: gid
-    if drag.dragging
+    if tawk.drag.dragging
       GROUP
-        gid: drag.ghostGroup
+        gid: tawk.drag.ghostGroup
 
 dom.GROUP = ->
   gid = @props.gid
-  members = fetch('group/' + gid).members or []
-  dimensions = fetch 'dimensions'
-  drag = fetch 'drag'
+  members = tawk['group/' + gid].members or []
 
-  group_info = fetch('/group/' + gid)
-  group_editing = fetch('editing-' + gid)
+  group_info = tawk['/group/' + gid]
+  group_editing = tawk['editing-' + gid]
   if not group_editing.timer
     group_editing.text = (if group_info.text == undefined then 'This is your group scratch space' else group_info.text)
 
   divSize = group_size(members.length or 1) # ghost group is size 1
 
-  me = fetch '/connection'
-
   DIV
     id: gid
-    className: (if drag.over == gid then 'dark-gray' else 'light-gray')
+    className: (if tawk.drag.over == gid then 'dark-gray' else 'light-gray')
     style:
       float: 'left'
       margin: '20px'
       borderRadius: '15px'
-      minWidth: divSize.width * dimensions.person_width + 'px'
-      maxWidth: divSize.width * dimensions.person_width + 'px'
+      minWidth: divSize.width * tawk.dimensions.person_width + 'px'
+      maxWidth: divSize.width * tawk.dimensions.person_width + 'px'
       # Height varies depending on size of textarea
       # Div around people sets height of that portion
 
     onMouseEnter: (e) ->
-      me.mouseover = gid
-      save(me)
+      tawk['/connection'].mouseover = gid
 
     onMouseLeave: (e) ->
-      me.mouseover = null
-      save(me)
+      tawk['/connection'].mouseover = null
 
     DIV
       style:
-        height: divSize.height * dimensions.person_height + 'px'
+        height: divSize.height * tawk.dimensions.person_height + 'px'
         position: 'relative'
       for user, index in members
         if user != null
           PERSON
             person: user
             borders: choose_borders(index, divSize)
-            position: abs_position_in_group(index, divSize, dimensions)
+            position: abs_position_in_group(index, divSize, tawk.dimensions)
     if members.length
       GROWING_TEXTAREA
         className: 'form-control'
@@ -218,46 +217,37 @@ dom.GROUP = ->
         value: group_editing.text
         onChange: (e) ->
           group_editing.text = e.target.value
-          save(group_editing)
           if group_editing.timer
             clearTimeout group_editing.timer
           group_editing.timer = setTimeout ->
             group_editing.timer = null
-            save(group_editing)
             group_info.text = group_editing.text
-            save(group_info)
           , 500
 
 dom.GROUP.refresh = ->
   gid = @props.gid
-
-  me = fetch '/connection'
 
   $(@getDOMNode()).droppable
     tolerance: 'pointer'
     accept: '.person'
     greedy: true
     over: ->
-      drag = fetch 'drag'
-      drag.over = gid
-      save(drag)
+      tawk.drag.over = gid
     out: ->
-      drag = fetch 'drag'
-      if drag.over == gid
+      if tawk.drag.over == gid
         # If not, another over event has fired on another group
         # and we do not want to clear the group
-        drag.over = null
-        save(drag)
+        tawk.drag.over = null
 
 dom.PERSON = ->
   person = @props.person
   borders = @props.borders
   top = @props.position.top
   left = @props.position.left
-  stream = fetch 'stream/' + person.id
-  me = fetch '/connection'
-  height = fetch('dimensions').person_height
-  width = fetch('dimensions').person_width
+  me = tawk['/connection']
+  stream = tawk['stream/' + person.id]
+  height = tawk.dimensions.person_height
+  width = tawk.dimensions.person_width
 
   DIV
     position: 'absolute'
@@ -279,14 +269,15 @@ dom.PERSON = ->
           person: person
       if person.video
         transform = 'scaleX(-1)'
-        if fetch('connection/' + person.id).flip_y
+        if tawk['connection/' + person.id].flip_y
           transform += ' scaleY(-1)'
         DIV
           style:
             transform: transform
             width: '100%'
             height: height + 'px'
-          onDoubleClick: => me.flip_y = not me.flip_y; save(me)
+          onDoubleClick: =>
+            me.flip_y = not me.flip_y
           VIDEO
             autoPlay: 'true'
             src: stream.url
@@ -334,9 +325,8 @@ dom.PERSON = ->
 dom.PERSON.refresh = ->
   person = @props.person
   borders = @props.borders
-  drag = fetch 'drag'
-  stream = fetch 'stream/' + person.id
-  me = fetch '/connection'
+  stream = tawk['stream/' + person.id]
+  me = tawk['/connection']
 
   volume = 0
   if person.id != me.id
@@ -357,20 +347,17 @@ dom.PERSON.refresh = ->
       refreshPositions: true
       zIndex: 1000
       start: (e, ui) ->
-        drag.over = null # set while you mouseover groups
-        drag.dragging = true
-        drag.ghostGroup = random_string 16
-        save(drag)
+        tawk.drag.over = null # set while you mouseover groups
+        tawk.drag.dragging = true
+        tawk.drag.ghostGroup = random_string 16
       stop: (e, ui) ->
-        if not drag.over or me.group != drag.over
-          me.group = drag.over or drag.ghostGroup
+        if not tawk.drag.over or me.group != tawk.drag.over
+          me.group = tawk.drag.over or tawk.drag.ghostGroup
           me.timeEntered = Date.now()
-          save(me)
 
-        drag.over = null
-        drag.dragging = false
-        drag.ghostGroup = null
-        save(drag)
+        tawk.drag.over = null
+        tawk.drag.dragging = false
+        tawk.drag.ghostGroup = null
 
         ui.helper.css
           top: 0
@@ -380,7 +367,7 @@ dom.PERSON.refresh = ->
       disabled: true
 
 dom.AV_CONTROL_BAR = ->
-  me = fetch '/connection'
+  me = tawk['/connection']
   DIV
     style:
       position: 'absolute'
@@ -400,7 +387,6 @@ dom.AV_CONTROL_BAR = ->
         else
           plugin_handle and plugin_handle.unmuteVideo()
           me.video = true
-        save(me)
     BUTTON
       className: 'btn btn-' + (if me.audio then 'default' else 'danger')
       SPAN
@@ -412,7 +398,6 @@ dom.AV_CONTROL_BAR = ->
         else
           plugin_handle and plugin_handle.unmuteAudio()
           me.audio = true
-        save(me)
 
 dom.AV_VIEW_BAR = ->
   person = @props.person
@@ -433,8 +418,8 @@ dom.AV_VIEW_BAR = ->
 
 dom.TOPBAR = ->
   state = @props.state
-  localUser = fetch 'ls/localUser'
-  me = fetch '/connection'
+  localUser = tawk[ 'ls/localUser']
+  me = tawk['/connection']
 
   DIV
     id: 'topbar'
@@ -458,10 +443,8 @@ dom.TOPBAR = ->
             value: localUser.name
             onChange: (e) ->
               localUser.name = e.target.value
-              save(localUser)
             onBlur: (e) ->
               me.name = localUser.name
-              save(me)
 
 # Auto growing text area.
 # Transfers props to a TEXTAREA.
@@ -641,31 +624,26 @@ new_remote_feed = (janus, feed) ->
     onlocalstream: Janus.noop
     onremotestream: (stream) ->
       # TODO: forget this key when they leave
-      save
-        key: 'stream/' + id,
+      tawk['stream/' + id] =
         url: URL.createObjectURL(stream)
         volume: 0
 
       speech = hark(stream, {interval: 200, play: false})
       speech.on('volume_change', (decibals, threshold) ->
-        stream = fetch 'stream/' + id
         if decibals < threshold
           # Probably not human speech
           decibals = 0
         # Transform to 0-100% scale
-        stream.volume = -2 * decibals
-        save stream
+        tawk['stream/' + id].volume = -2 * decibals
       )
 
     oncleanup: console.error
     detached: console.error
 
 initialize_janus = (my_id, my_space) ->
-  if fetch('janus').initialized
+  if tawk.janus_initialized
     return
-  save
-    key: 'janus'
-    initialized: true
+  tawk.janus_initialized = true
 
   Janus.init
     callback: ->
@@ -673,7 +651,7 @@ initialize_janus = (my_id, my_space) ->
         console.error '', "No WebRTC support in your browser.", "You must use Chrome, Firefox, or Edge"
 
       janus = new Janus(
-        server: 'https://' + window.location.hostname + ':8089/janus'
+        server: 'https://tawk.space:8089/janus'
         success: ->
           janus.attach
             plugin: "janus.plugin.videoroom"
@@ -718,20 +696,17 @@ initialize_janus = (my_id, my_space) ->
             onlocalstream: (stream) ->
               console.log "Got local stream", stream
 
-              save
-                key: 'stream/' + my_id
+              tawk['stream/' + my_id] =
                 url: URL.createObjectURL(stream)
                 volume: 0
 
               speech = hark(stream, {interval: 200, play: false})
               speech.on('volume_change', (decibals, threshold) ->
-                stream = fetch 'stream/' + my_id
                 if decibals < threshold
                   # Probably not human speech
                   decibals = 0
                 # Transform to 0-100% scale
-                stream.volume = -2 * decibals
-                save stream
+                tawk['stream/' + my_id].volume = -2 * decibals
               )
 
             onremotestream: Janus.noop
@@ -769,10 +744,5 @@ initialize_janus = (my_id, my_space) ->
     .dark-gray { background-color: #BFBFBF }
   </style>
 </head>
-
-<script>
-  statebus_server = window.location.protocol + '//' + window.location.hostname + ':3004'
-  statebus_version = 4
-</script>
-<script src="https://stateb.us/client4.js" ></script>
+<script src="https://stateb.us/client5.js" ></script>
 <script src="/janus.js" ></script>
