@@ -504,22 +504,15 @@ dom.GROWING_TEXTAREA = ->
 dom.GROWING_TEXTAREA.refresh = ->
   @adjustHeight()
 
-alpha = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz'
-numeric = '0123456789'
-alphanumeric = alpha + numeric
+random_string = (length) ->
+  Math.round((Math.pow(36, length + 1) - Math.random() * Math.pow(36, length)))
+    .toString(36)
+    .slice(1)
 
-random_letters = (num) ->
-  _random_string alpha, num
-random_numbers = (num) ->
-  _random_string numeric, num
-random_string = (num) ->
-  _random_string alphanumeric, num
-
-_random_string = (string, num) ->
-  to_ret = ''
-  for i in [0...num]
-    to_ret += string[Math.floor(Math.random() * string.length)]
-  to_ret
+random_numbers = (length) ->
+  Math.round((Math.pow(10, length + 1) - Math.random() * Math.pow(10, length)))
+    .toString(10)
+    .slice(1)
 
 should_hear_fully = (person, me) ->
   me.group in [person.group, person.mouseover] or
