@@ -6,7 +6,7 @@ plugin_handle = null
 ###############################################################################
 
 window.tawkbus = statebus()
-tawkbus.localstorage_client("ls/*")
+tawkbus.localstorage_client("tawkls/*")
 tawkbus.sockjs_client("/*", "https://tawk.space:3004")
 window.tawk = tawkbus.sb
 
@@ -117,17 +117,17 @@ window.onresize = () ->
 ###############################################################################
 
 dom.BODY = ->
-  localUser = tawk['ls/localUser']
+  localUser = tawk['tawkls/localUser']
   if not localUser.name
     localUser.name = 'Anonymous ' + random_numbers(4)
 
+  # Have to make sure we get all connections to choose
+  # whether to join the first group
   connections = tawk['/connections']
   if @loading()
     return DIV {}, 'Loading...'
 
   me = tawk['/connection']
-  if @loading()
-    return DIV {}, 'Loading...'
   if not me.id
     me.id = random_string(16)
     me.name = localUser.name
@@ -418,7 +418,7 @@ dom.AV_VIEW_BAR = ->
 
 dom.TOPBAR = ->
   state = @props.state
-  localUser = tawk[ 'ls/localUser']
+  localUser = tawk[ 'tawkls/localUser']
   me = tawk['/connection']
 
   DIV
@@ -705,5 +705,5 @@ initialize_janus = (my_id, my_space) ->
     .dark-gray { background-color: #BFBFBF }
   </style>
 </head>
-<script src="https://stateb.us/client5.js" ></script>
+<script src="/node_modules/statebus/client.js" ></script>
 <script src="/janus.js" ></script>
