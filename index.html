@@ -121,6 +121,25 @@ dom.BODY = ->
   if not localUser.name
     localUser.name = 'Anonymous ' + random_numbers(4)
 
+  DIV {},
+    TOPBAR()
+    DIV
+      style:
+        border: '0'
+        height: '1px'
+        backgroundImage: 'linear-gradient(to right, rgba(0, 0, 0, 0), rgba(0, 0, 0, 0.75), rgba(0, 0, 0, 0))'
+    TAWK
+      name: localUser.name
+      space: get_space()
+      video: true
+      audio: true
+
+dom.TAWK = ->
+  space = if @props.space? then @props.space else ''
+  name = if @props.name? then @props.name else 'Anonymous ' + random_numbers(4)
+  video = if @props.video? then @props.video else true
+  audio = if @props.audio? then @props.audio else true
+
   # Have to make sure we get all connections to choose
   # whether to join the first group
   connections = tawk['/connections']
@@ -130,28 +149,20 @@ dom.BODY = ->
   me = tawk['/connection']
   if not me.id
     me.id = random_string(16)
-    me.name = localUser.name
+    me.name = name
     me.group = tawk.gids[0] or random_string(16)
     me.timeEntered = Date.now()
     me.active = true
-    me.space = get_space()
-    me.video = true
-    me.audio = true
+    me.space = space
+    me.video = video
+    me.audio = audio
 
-  initialize_janus(me.id, me.space)
+  if not tawk.janus_initialized
+    initialize_janus(me.id, me.space)
+    tawk.janus_initialized = true
 
-  DIV {},
-    TOPBAR()
-    DIV
-      style:
-        border: '0'
-        height: '1px'
-        backgroundImage: 'linear-gradient(to right, rgba(0, 0, 0, 0), rgba(0, 0, 0, 0.75), rgba(0, 0, 0, 0))'
-    GROUPS()
-
-dom.GROUPS = ->
   DIV
-    id: 'groups'
+    id: 'tawk'
     style:
       height: 'auto'
       minHeight: '85%'
@@ -626,10 +637,6 @@ new_remote_feed = (janus, feed) ->
                 room: 1234
 
 initialize_janus = (my_id, my_space) ->
-  if tawk.janus_initialized
-    return
-  tawk.janus_initialized = true
-
   Janus.init
     callback: ->
       if not Janus.isWebrtcSupported()
