@@ -10,7 +10,7 @@ tawkbus.localstorage_client("tawkls/*")
 tawkbus.sockjs_client("/*", "https://tawk.space:3004")
 window.tawk = tawkbus.sb
 
-tawk.janus_initialized = 0
+tawk.janus_initialized = false
 
 unsavable = (obj) ->
   throw new Error("Cannot save #{obj.key}")
@@ -522,27 +522,22 @@ group_size = (num_people) ->
   floor = Math.floor(Math.sqrt(num_people))
   ceil = Math.ceil(Math.sqrt(num_people))
 
-  horizontal_orientation = null
   if floor == ceil
-    horizontal_orientation = {height: floor, width: floor}
+    height: floor
+    width: floor
   else if num_people > floor * ceil
-    horizontal_orientation = {height: ceil, width: ceil}
+    height: ceil
+    width: ceil
   else
-    horizontal_orientation = {height: floor, width: ceil}
-
-  if window.innerWidth > window.innerHeight
-    return horizontal_orientation
-  else
-    return {height: horizontal_orientation.width, width: horizontal_orientation.height}
+    height: floor
+    width: ceil
 
 choose_borders = (index, divSize) ->
   x = index % divSize.width
   y = Math.floor(index / divSize.width)
-  borders = {
-    topLeft: (x == 0 and y == 0)
-    topRight: (x == divSize.width - 1 and y == 0)
-  }
-  return borders
+
+  topLeft: (x == 0 and y == 0)
+  topRight: (x == divSize.width - 1 and y == 0)
 
 abs_position_in_group = (index, divSize, dimensions) ->
   x = index % divSize.width
@@ -633,7 +628,7 @@ new_remote_feed = (janus, feed) ->
 initialize_janus = (my_id, my_space) ->
   if tawk.janus_initialized
     return
-  tawk.janus_initialized = 1
+  tawk.janus_initialized = true
 
   Janus.init
     callback: ->
