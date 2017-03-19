@@ -37,7 +37,7 @@ window.statebus_ready.push(->
   tawkbus('_groups').to_fetch = (key) ->
     groups = {}
     for conn in tawk.connections
-      if conn.active and conn.space == get_space()
+      if conn.active and conn.space == tawk.space
         if conn.group not of groups
           groups[conn.group] = []
         groups[conn.group].push(conn)
@@ -66,7 +66,7 @@ window.statebus_ready.push(->
   tawkbus('active_connections').to_fetch = (key) ->
     count = 0
     for conn in tawk.connections
-      if conn.active and conn.space == get_space()
+      if conn.active and conn.space == tawk.space
         count += 1
 
     _: count
@@ -510,9 +510,6 @@ abs_position_in_group = (index, divSize, dimensions) ->
 
   top: y * dimensions.person_height
   left: x * dimensions.person_width
-
-get_space = ->
-  window.location.pathname.split('/')[1]
 
 ###############################################################################
 # Send and receive video streams

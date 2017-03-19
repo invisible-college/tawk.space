@@ -51,6 +51,9 @@ random_numbers = (length) ->
   Math.round((Math.pow(10, length + 1) - Math.random() * Math.pow(10, length)))
     .toString(10)
     .slice(1)
+
+get_space = ->
+  window.location.pathname.split('/')[1]
 </script>
 
 <head>
