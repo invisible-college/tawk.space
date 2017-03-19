@@ -6,10 +6,13 @@ plugin_handle = null
 
 window.statebus_ready or= []
 window.statebus_ready.push(->
-  window.tawkbus = statebus()
-  tawkbus.sockjs_client("/*", "https://tawk.space")
-  window.tawk = tawkbus.sb
+  # HACK: Remove
+  window.tawkbus = window.bus
+  window.tawk = window.sb
+
   tawk.janus_initialized = false
+  tawk.id = random_string(16)
+  tawk.space = null # Will be filled in dom.TAWK
 
   unsavable = (obj) ->
     throw new Error("Cannot save #{obj.key}")
@@ -116,10 +119,14 @@ window.statebus_ready.push(->
 ###############################################################################
 
 dom.TAWK = ->
-  space = if @props.space? then @props.space else ''
+  tawk.space = if @props.space? then @props.space else ''
   name = if @props.name? then @props.name else 'Anonymous ' + random_numbers(4)
   video = if @props.video? then @props.video else true
   audio = if @props.audio? then @props.audio else true
+
+  if not tawk.janus_initialized
+    initialize_janus(tawk.id, tawk.space)
+    tawk.janus_initialized = true
 
   # Have to make sure we get all connections to choose
   # whether to join the first group
@@ -129,18 +136,14 @@ dom.TAWK = ->
 
   me = tawk['/connection']
   if not me.id
-    me.id = random_string(16)
+    me.id = tawk.id
     me.name = name
     me.group = tawk.gids[0] or random_string(16)
     me.timeEntered = Date.now()
     me.active = true
-    me.space = space
+    me.space = tawk.space
     me.video = video
     me.audio = audio
-
-  if not tawk.janus_initialized
-    initialize_janus(me.id, me.space)
-    tawk.janus_initialized = true
 
   DIV
     id: 'tawk'
@@ -587,7 +590,7 @@ new_remote_feed = (janus, feed) ->
                 request: "start"
                 room: 1234
 
-initialize_janus = (my_id, my_space) ->
+initialize_janus = () ->
   Janus.init
     callback: ->
       if not Janus.isWebrtcSupported()
@@ -601,7 +604,7 @@ initialize_janus = (my_id, my_space) ->
           janus.attach
             plugin: "janus.plugin.videoroom"
             error: console.error
-            onlocalstream: (stream) -> recieved_stream(stream, my_id)
+            onlocalstream: (stream) -> recieved_stream(stream, tawk.id)
             success: (ph) ->
               # Join plugin as a publisher (able to both send and receive streams)
               plugin_handle = ph
@@ -611,14 +614,14 @@ initialize_janus = (my_id, my_space) ->
                   room: 1234
                   ptype: "publisher"
                   display: JSON.stringify
-                    id: my_id
-                    space: my_space
+                    id: tawk.id
+                    space: tawk.space
             onmessage: (msg, jsep) ->
               # Janus is informing us of publishers we do not know about
               publishers = msg["publishers"] or []
               for feed in publishers
                 {id, space} = JSON.parse feed.display
-                if space == my_space
+                if space == tawk.space
                   new_remote_feed janus, feed
 
               # The plugin_handle.send call to join as a publisher succeeded.
