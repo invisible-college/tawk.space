@@ -6,9 +6,10 @@ plugin_handle = null
 
 window.statebus_ready or= []
 window.statebus_ready.push(->
-  window.tawkbus = statebus()
-  tawkbus.sockjs_client("/*", "https://tawk.space")
-  window.tawk = tawkbus.sb
+  # HACK: Remove
+  window.tawkbus = window.bus
+  window.tawk = window.sb
+
   tawk.janus_initialized = false
   tawk.id = random_string(16)
   tawk.space = null # Will be filled in dom.TAWK
