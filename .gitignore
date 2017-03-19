@@ -37,3 +37,5 @@ favicon.ico
 certs
 db
 backups
+
+bower_components
