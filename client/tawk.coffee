@@ -7,8 +7,9 @@ plugin_handle = null
 window.statebus_ready or= []
 window.statebus_ready.push(->
   # HACK: Remove
-  window.tawkbus = window.bus
-  window.tawk = window.sb
+  window.tawkbus = window.statebus()
+  tawkbus.sockjs_client('/*', 'state://tawk.space')
+  window.tawk = tawkbus.sb
 
   tawk.janus_initialized = false
   tawk.id = random_string(16)

@@ -3,6 +3,7 @@ var bus = require('statebus/server')({
     full_node: true,
     file_store: false,
     client: function(cbus) {
+        cbus.route_defaults_to(bus);
     },
 });
 
