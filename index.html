@@ -1,6 +1,6 @@
 <script type="statebus">
 dom.BODY = ->
-  localUser = tawk['tawkls/localUser']
+  localUser = tawk['ls/localUser']
   if not localUser.name
     localUser.name = 'Anonymous ' + random_numbers(4)
 
@@ -19,7 +19,7 @@ dom.BODY = ->
 
 dom.TOPBAR = ->
   state = @props.state
-  localUser = tawk[ 'tawkls/localUser']
+  localUser = tawk[ 'ls/localUser']
   me = tawk['/connection']
 
   DIV
