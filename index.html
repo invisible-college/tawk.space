@@ -4,7 +4,11 @@ dom.BODY = ->
   if not localUser.name
     localUser.name = 'Anonymous ' + random_numbers(4)
 
-  DIV {},
+  DIV
+    style:
+      position: 'relative'
+    CURSORS()
+    StateDash()
     TOPBAR()
     DIV
       style:
@@ -83,4 +87,7 @@ get_space = ->
 </head>
 <script src="https://stateb.us/client5.js"></script>
 <script src="/janus.js" ></script>
+<script src="/client/shared.coffee"></script>
+<script src="/client/presence.coffee"></script>
+<script src="/client/state_dash.coffee"></script>
 <script src="/client/tawk.coffee"></script>
