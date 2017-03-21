@@ -6,7 +6,6 @@ plugin_handle = null
 
 window.statebus_ready or= []
 window.statebus_ready.push(->
-  # HACK: Remove
   window.tawkbus = window.statebus()
   tawkbus.sockjs_client('/*', 'state://tawk.space')
   window.tawk = tawkbus.sb
@@ -411,64 +410,6 @@ dom.AV_VIEW_BAR = ->
         disabled: 'disabled'
         SPAN
           className: 'fa fa-microphone-slash'
-
-# Auto growing text area.
-# Transfers props to a TEXTAREA.
-dom.GROWING_TEXTAREA = ->
-  @props.style ||= {}
-  @props.style.minHeight ||= 40
-  @props.style.height = \
-      @local.height || @props.initial_height || @props.style.minHeight
-  @props.style.fontFamily ||= 'inherit'
-  @props.style.lineHeight ||= '22px'
-  @props.style.resize ||= 'none'
-  @props.style.outline ||= 'none'
-
-  # save the supplied onChange function if the client supplies one
-  _onChange = @props.onChange
-
-  @props.onClick = (ev) ->
-    ev.preventDefault(); ev.stopPropagation()
-
-  @props.onChange = (ev) =>
-    _onChange?(ev)
-    @adjustHeight()
-
-  @adjustHeight = =>
-    textarea = @getDOMNode()
-
-    if !textarea.value || textarea.value == ''
-      h = @props.initial_height || @props.style.minHeight
-
-      if h != @local.height
-        @local.height = h
-        save @local
-    else
-      min_height = @props.style.minHeight
-      max_height = @props.style.maxHeight
-
-      # Get the real scrollheight of the textarea
-      h = textarea.style.height
-      textarea.style.height = '' if @last_value?.length > textarea.value.length
-      scroll_height = textarea.scrollHeight
-      textarea.style.height = h  if @last_value?.length > textarea.value.length
-
-      if scroll_height != textarea.clientHeight
-        h = scroll_height + 5
-        if max_height
-          h = Math.min(scroll_height, max_height)
-        h = Math.max(min_height, h)
-
-        if h != @local.height
-          @local.height = h
-          save @local
-
-    @last_value = textarea.value
-
-  TEXTAREA @props
-
-dom.GROWING_TEXTAREA.refresh = ->
-  @adjustHeight()
 
 random_string = (length) ->
   Math.round((Math.pow(36, length + 1) - Math.random() * Math.pow(36, length)))
