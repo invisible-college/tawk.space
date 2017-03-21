@@ -118,6 +118,30 @@ window.statebus_ready.push(->
 # React render functions
 ###############################################################################
 
+###
+TAWK is the UI for groups that powers tawk.space.
+It supports multiple groups, mute audio/video buttons,
+and volume visualization, and a shared text area.
+
+Params:
+space (string, default: ''): Identifier for the room.
+    Correlates to <space-id> in https://tawk.space/<space-id>
+
+name (string, default: Randomly generated username): User's name
+    Appears when hovering over a person.
+
+video (boolean, default: true): Whether to default publish video
+
+audio (boolean, default: true): Whether to default publish audio
+
+Note that audio and video only refer to the default state of whether
+user is publishing their audio or video. They can use the buttons
+to mute/unmute their audio and video. The user will be asked for
+camera and microphone permissions regardless of the values of these booleans.
+
+This widget can only be used from an https site, since WebRTC
+is only supported on https sites.
+###
 dom.TAWK = ->
   tawk.space = if @props.space? then @props.space else ''
   name = if @props.name? then @props.name else 'Anonymous ' + random_numbers(4)
