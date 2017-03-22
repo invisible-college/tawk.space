@@ -149,7 +149,9 @@ dom.TAWK = ->
   audio = if @props.audio? then @props.audio else true
 
   if not tawk.janus_initialized
-    initialize_janus(tawk.id, tawk.space)
+    initialize_janus
+      audio: true
+      video: true
     tawk.janus_initialized = true
 
   # Have to make sure we get all connections to choose
@@ -502,58 +504,99 @@ recieved_stream = (stream, person_id) ->
 # Tell Janus to publish our video stream to the server
 # Note that the hook when we get a local stream is actually
 # a separate callback to janus.attach
-publish_local_stream = (audio) ->
+window.publish_local_stream = ({audio, video}) ->
   plugin_handle.createOffer
     media:
       audioRecv: false
       videoRecv: false
       audioSend: audio
-      videoSend: true
+      videoSend: video
     success: (jsep) ->
       plugin_handle.send
         message:
           request: "configure"
           audio: audio
-          video: true
+          video: video
         jsep: jsep
     error: (error) ->
       if audio
-        console.error 'no_camera', 'No camera allowed', 'Trying audio-only mode'
-        publish_local_stream false
+        audio = false
+        console.error 'no_camera', 'No camera allowed', 'Trying audio-only mode', error
+        publish_local_stream()
       else
-        console.error 'no_camera', 'No camera or microphone allowed', 'You are a listener'
+        console.error 'no_camera', 'No camera or microphone allowed', 'You are a listener', error
 
-new_remote_feed = (janus, feed) ->
-  remote_feed = null
-  {id, space} = JSON.parse feed.display
-  janus.attach
-    plugin: "janus.plugin.videoroom"
-    onremotestream: (stream) -> recieved_stream(stream, id)
-    error: console.error
-    success: (ph) ->
-      remote_feed = ph
-      remote_feed.send
-        message:
-          request: "join"
-          room: 1234
-          ptype: "listener"
-          feed: feed.id
-    onmessage: (msg, jsep) ->
-      if jsep
-        remote_feed.createAnswer
-          jsep: jsep
-          error: console.error
-          media:
-            audioSend: false
-            videoSend: false
-          success: (jsep) ->
-            remote_feed.send
-              jsep: jsep
-              message:
-                request: "start"
-                room: 1234
+###
+Connect to tawk's video server (Janus). Automatically subscribe
+to all remote streams in the same space,
+and by default automatically publish local stream (though this is configurable).
 
-initialize_janus = () ->
+State imported:
+tawk.space (string, required) -> The room to subscribe to. Corresponds to <space-id>
+    in https://tawk.space/<space-id>. Note that you probably
+    don't want to have overlap between spaces used in dom.TAWK
+    and directly in initialize_janus. This function subscribes
+    to all streams in the space, but dom.TAWK only renders streams
+    that are in a groups. The end result is that if you call the lower
+    level function you get all the streams, but using dom.TAWK you only
+    get a subset of them.
+tawk.id (string, required): An identifier for the connection that must be unique
+    in the given space. It is used to export stream information
+    for every user.
+
+State exported:
+tawk['streams/' + id] -> {
+  url: A blob url for the stream. It can be used in audio or video tags with src: url
+  volume: On a scale from 0-100, how loud is the user speaking.
+      Volume tries to reflect human speech, and ignore static background noise.
+}
+There will be one piece of state exported per remote *and* local stream.
+
+Params:
+audio (boolean, default=true): Whether to subscribe to and publish audio
+video (boolean, default=true): Whether to subscribe to and publish video
+on_join (function({audio, video}), default=window.publish_local_stream):
+    A callback for when we have connected to Janus and its videoroom plugin.
+    The default callback is to immediately publish your local stream and ask
+    the user for permission to their camera and/or microphone. You can
+    override this callback if you do not wish to immediately publish the local stream.
+    The callback takes {audio, video}, which are the same values passed
+    into initialize_janus, and represent whether the caller wants to publish
+    audio and video.
+###
+window.initialize_janus = ({audio = true, video = true, on_join = window.publish_local_stream}) ->
+  new_remote_feed = (janus, feed) ->
+    remote_feed = null
+    {id, space} = JSON.parse feed.display
+    janus.attach
+      plugin: "janus.plugin.videoroom"
+      onremotestream: (stream) -> recieved_stream(stream, id)
+      error: console.error
+      success: (ph) ->
+        remote_feed = ph
+        remote_feed.send
+          message:
+            request: "join"
+            room: 1234
+            ptype: "listener"
+            feed: feed.id
+      onmessage: (msg, jsep) ->
+        if jsep
+          remote_feed.createAnswer
+            jsep: jsep
+            error: console.error
+            media:
+              audioRecv: audio
+              videoRecv: video
+              audioSend: false
+              videoSend: false
+            success: (jsep) ->
+              remote_feed.send
+                jsep: jsep
+                message:
+                  request: "start"
+                  room: 1234
+
   Janus.init
     callback: ->
       if not Janus.isWebrtcSupported()
@@ -590,7 +633,9 @@ initialize_janus = () ->
               # The plugin_handle.send call to join as a publisher succeeded.
               # We can now send our video to everybody
               if msg["videoroom"] == "joined"
-                publish_local_stream true
+                on_join
+                  audio: audio
+                  video: video
 
               if jsep
                 plugin_handle.handleRemoteJsep
