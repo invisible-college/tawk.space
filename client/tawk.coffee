@@ -161,9 +161,11 @@ dom.TAWK = ->
     return DIV {}, 'Loading...'
 
   me = tawk['/connection']
+  me.name = name  # Is allowed to change
   if not me.id
+    # These do not change (yet) if dom.TAWK is rerendered
+    # with different arguments
     me.id = tawk.id
-    me.name = name
     me.group = tawk.gids[0] or random_string(16)
     me.timeEntered = Date.now()
     me.active = true

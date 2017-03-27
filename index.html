@@ -1,8 +1,10 @@
 <script type="statebus">
 dom.BODY = ->
-  localUser = tawk['ls/localUser']
+  localUser = sb['ls/localUser']
   if not localUser.name
     localUser.name = 'Anonymous ' + random_numbers(4)
+
+  sb['/connection'].name = localUser.name
 
   DIV
     style:
@@ -23,8 +25,8 @@ dom.BODY = ->
 
 dom.TOPBAR = ->
   state = @props.state
-  localUser = tawk[ 'ls/localUser']
-  me = tawk['/connection']
+  localUser = sb[ 'ls/localUser']
+  me = sb['/connection']
 
   DIV
     id: 'topbar'
@@ -48,8 +50,6 @@ dom.TOPBAR = ->
             value: localUser.name
             onChange: (e) ->
               localUser.name = e.target.value
-            onBlur: (e) ->
-              me.name = localUser.name
 
 random_numbers = (length) ->
   Math.round((Math.pow(10, length + 1) - Math.random() * Math.pow(10, length)))
@@ -85,7 +85,7 @@ get_space = ->
     .dark-gray { background-color: #BFBFBF }
   </style>
 </head>
-<script src="https://stateb.us/client5.js"></script>
+<script src="https://stateb.us/client5.js" server="state://tawk.space"></script>
 <script src="/janus.js" ></script>
 <script src="/client/shared.coffee"></script>
 <script src="/client/presence.coffee"></script>
