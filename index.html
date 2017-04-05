@@ -1,8 +1,9 @@
 <script type="statebus">
 dom.BODY = ->
   localUser = sb['ls/localUser']
+
   if not localUser.name
-    localUser.name = 'Anonymous ' + random_numbers(4)
+    localUser.name = random_name?() or 'Anonymous ' + random_numbers(4)
 
   sb['/connection'].name = localUser.name
 

@@ -144,10 +144,6 @@ is only supported on https sites.
 ###
 dom.TAWK = ->
   tawk.space = if @props.space? then @props.space else ''
-  name = if @props.name? then @props.name else 'Anonymous ' + random_numbers(4)
-  video = if @props.video? then @props.video else true
-  audio = if @props.audio? then @props.audio else true
-
   if not tawk.janus_initialized
     initialize_janus
       audio: true
@@ -157,10 +153,14 @@ dom.TAWK = ->
   # Have to make sure we get all connections to choose
   # whether to join the first group
   connections = tawk['/connections']
+  me = tawk['/connection']
   if @loading()
     return DIV {}, 'Loading...'
+  
+  name = @props.name or random_name?() or 'Anonymous ' + random_numbers(4)
+  video = if @props.video? then @props.video else true
+  audio = if @props.audio? then @props.audio else true
 
-  me = tawk['/connection']
   me.name = name  # Is allowed to change
   if not me.id
     # These do not change (yet) if dom.TAWK is rerendered
