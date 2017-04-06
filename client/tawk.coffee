@@ -190,10 +190,6 @@ dom.GROUP = ->
   gid = @props.gid
   members = tawk['group/' + gid].members or []
 
-  group_info = tawk['/group/' + gid]
-  if !@loading() and group_info.text == undefined
-    group_info.text = 'This is your group scratch space'
-
   divSize = group_size(members.length or 1) # ghost group is size 1
 
   DIV
@@ -225,6 +221,8 @@ dom.GROUP = ->
             borders: choose_borders(index, divSize)
             position: abs_position_in_group(index, divSize, tawk.dimensions)
     if members.length
+      text = tawk['/group' + gid].text
+      if text == undefined then text = 'This is your group scratch space'
       AUTOSIZEBOX
         className: 'form-control'
         rows: 2
@@ -236,8 +234,8 @@ dom.GROUP = ->
           borderBottomRightRadius: '15px'
           outline: 'none'
           border: '1px solid #aaa'
-        value: group_info.text
-        onChange: (e) -> group_info.text = e.target.value
+        value: text
+        onChange: (e) -> tawk['/group' + gid].text = e.target.value
 
 dom.GROUP.refresh = ->
   gid = @props.gid
@@ -402,6 +400,7 @@ dom.AV_CONTROL_BAR = ->
         else
           plugin_handle and plugin_handle.unmuteVideo()
           me.video = true
+        return
     BUTTON
       className: 'btn btn-' + (if me.audio then 'default' else 'danger')
       SPAN
@@ -413,6 +412,7 @@ dom.AV_CONTROL_BAR = ->
         else
           plugin_handle and plugin_handle.unmuteAudio()
           me.audio = true
+        return
 
 dom.AV_VIEW_BAR = ->
   person = @props.person
