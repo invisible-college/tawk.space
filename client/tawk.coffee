@@ -410,6 +410,7 @@ dom.AV_CONTROL_BAR = ->
         else
           plugin_handle and plugin_handle.unmuteVideo()
           me.video = true
+        return
     BUTTON
       className: 'btn btn-' + (if me.audio then 'default' else 'danger')
       SPAN
@@ -421,6 +422,7 @@ dom.AV_CONTROL_BAR = ->
         else
           plugin_handle and plugin_handle.unmuteAudio()
           me.audio = true
+        return
 
 dom.AV_VIEW_BAR = ->
   person = @props.person
