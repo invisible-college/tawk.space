@@ -191,9 +191,8 @@ dom.GROUP = ->
   members = tawk['group/' + gid].members or []
 
   group_info = tawk['/group/' + gid]
-  group_editing = tawk['editing-' + gid]
-  if not group_editing.timer
-    group_editing.text = (if group_info.text == undefined then 'This is your group scratch space' else group_info.text)
+  if !@loading() and group_info.text == undefined
+    group_info.text = 'This is your group scratch space'
 
   divSize = group_size(members.length or 1) # ghost group is size 1
 
@@ -226,7 +225,7 @@ dom.GROUP = ->
             borders: choose_borders(index, divSize)
             position: abs_position_in_group(index, divSize, tawk.dimensions)
     if members.length
-      GROWING_TEXTAREA
+      AUTOSIZEBOX
         className: 'form-control'
         rows: 2
         style:
@@ -237,15 +236,8 @@ dom.GROUP = ->
           borderBottomRightRadius: '15px'
           outline: 'none'
           border: '1px solid #aaa'
-        value: group_editing.text
-        onChange: (e) ->
-          group_editing.text = e.target.value
-          if group_editing.timer
-            clearTimeout group_editing.timer
-          group_editing.timer = setTimeout ->
-            group_editing.timer = null
-            group_info.text = group_editing.text
-          , 500
+        value: group_info.text
+        onChange: (e) -> group_info.text = e.target.value
 
 dom.GROUP.refresh = ->
   gid = @props.gid
