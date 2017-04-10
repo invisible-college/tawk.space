@@ -380,6 +380,8 @@ dom.PERSON.refresh = ->
     $(@getDOMNode().querySelector('.person')).draggable
       disabled: true
 
+
+
 dom.AV_CONTROL_BAR = ->
   me = tawk['/connection']
   DIV
@@ -389,9 +391,10 @@ dom.AV_CONTROL_BAR = ->
       right: 0
       zIndex: 100
       textAlign: 'right'
-    BUTTON
-      className: 'btn btn-' + (if me.video then 'default' else 'danger') + \
-                ' fa fa-video-camera' + (if me.video then '' else '-slash')
+
+
+    AV_BUTTON
+      danger: !me.video
       onClick: (e) ->
         if me.video
           plugin_handle?.muteVideo()
@@ -401,9 +404,12 @@ dom.AV_CONTROL_BAR = ->
           me.video = true
         return
 
-    BUTTON
-      className: 'btn btn-' + (if me.audio then 'default' else 'danger') + \
-                ' fa fa-microphone' + (if me.audio then '' else '-slash')
+      VIDEO_ICON
+        on: !!me.video
+        width: 16
+
+    AV_BUTTON
+      danger: !me.audio
       onClick: (e) ->
         if me.audio
           plugin_handle?.muteAudio()
@@ -413,22 +419,76 @@ dom.AV_CONTROL_BAR = ->
           me.audio = true
         return
 
+      MIC_ICON
+        on: !!me.audio
+        width: 16
+
 dom.AV_VIEW_BAR = ->
   person = @props.person
   DIV
     style:
       position: 'absolute'
-      width: '100%'
-      bottom: '0'
-      left: '0'
-      zIndex: '100'
+      bottom: 0
+      right: 0
+      zIndex: 100
       textAlign: 'right'
     if not person.audio
-      BUTTON
-        className: 'btn btn-danger'
+      AV_BUTTON
         disabled: 'disabled'
-        SPAN
-          className: 'fa fa-microphone-slash'
+        danger: true
+        MIC_ICON
+          on: false
+          width: 16
+
+danger_red = '#d43f3a'
+dom.AV_BUTTON = ->
+  danger = @props.danger
+  @transferPropsTo BUTTON 
+    style:
+      border: "1px solid"
+      borderColor: if danger then danger_red else '#aaa'
+
+      backgroundImage: if danger then 'linear-gradient(to bottom,#d9534f 0,#c12e2a 100%)' else 'linear-gradient(to bottom,#fff 0,#e0e0e0 100%)'
+      textShadow: '0 1px 0 #fff'
+      backgroundColor: if danger then danger_red else 'white'
+      marginBottom: 0 
+      padding: '4px 8px'
+      borderRadius: 4
+    @props.children
+
+
+VIDEO_ICON = (props) -> 
+  SVG
+    viewBox: "0 0 54 54"
+    width: props.width or 20
+    height: props.width or 20
+    fill: if !props.on then 'white'
+
+    RECT x: 4, y: 11, width: 36, height: 32, rx: 4, ry: 4
+    POLYGON points: "32,27 50,13 50,41", strokeLinejoin: 'round'
+
+    if !props.on 
+      [LINE(x1: 54, y1: 7, x2: 0, y2: 47, stroke: 'white', strokeWidth: 3) 
+       LINE(x1: 57, y1: 7, x2: 0, y2: 50, stroke: danger_red, strokeWidth: 3)]
+          
+
+
+MIC_ICON = (props) -> 
+  SVG
+    viewBox: "-3 0 21 24"
+    width: props.width or 20
+    height: props.width or 20
+    fill: if !props.on then 'white'
+
+    PATH 
+      d: "M12,10V4c0-2.209-1.791-4-4-4S4,1.791,4,4v6c0,2.209,1.791,4,4,4S12,12.209,12,10z"
+    PATH
+      d: "M0,7v3c0,4.072,3.06,7.435,7,7.931V22h2v-4.069c3.939-0.495,7-3.858,7-7.931V7h-2v3c0,3.309-2.691,6-6,6s-6-2.691-6-6V7H0z"
+
+    if !props.on 
+      [LINE(x1: 18, y1: 1, x2: 0, y2: 17.5, stroke: 'white', strokeWidth: 3) 
+       LINE(x1: 18, y1: 4, x2: 0, y2: 20.5, stroke: danger_red, strokeWidth: 3)]
+
 
 random_string = (length) ->
   Math.round((Math.pow(36, length + 1) - Math.random() * Math.pow(36, length)))
