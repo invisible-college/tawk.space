@@ -5,7 +5,7 @@ plugin_handle = null
 ###############################################################################
 
 window.statebus_ready or= []
-window.statebus_ready.push(->
+window.statebus_ready.push ->
   window.tawkbus = window.statebus()
   tawkbus.sockjs_client('/*', 'state://tawk.space')
   window.tawk = tawkbus.sb
@@ -79,8 +79,8 @@ window.statebus_ready.push(->
     screen_height = tawk.window.height
 
     # 240 x 180 is the minimum
-    person_height = 180
-    person_width = 240
+    person_height = 36 # 180
+    person_width = 48 # 240
 
     # Hacky way to render groups as big as possible
     # when there are only a few people in the space
@@ -108,12 +108,12 @@ window.statebus_ready.push(->
 
   tawkbus('window').to_fetch = (key) ->
     _:
-      width: window.innerWidth
-      height: window.innerHeight - $("#topbar").outerHeight(true)
+      width: if tawk.width > 0 then tawk.width else window.innerWidth
+      height: if tawk.height > 0 then tawk.height else window.innerHeight
 
   window.onresize = () ->
     tawkbus.dirty 'window'
-)
+
 ###############################################################################
 # React render functions
 ###############################################################################
@@ -149,6 +149,12 @@ dom.TAWK = ->
       audio: true
       video: true
     tawk.janus_initialized = true
+
+  if @props.height && @props.height != tawk.height
+    tawk.height = @props.height 
+  if @props.width && @props.width != tawk.width
+    tawk.width = @props.width
+  tawk.scratch_disabled = !!@props.scratch_disabled
 
   # Have to make sure we get all connections to choose
   # whether to join the first group
@@ -193,22 +199,26 @@ dom.GROUP = ->
   group_info = tawk['/group/' + gid]
   group_editing = tawk['editing-' + gid]
   if not group_editing.timer
-    group_editing.text = (if group_info.text == undefined then 'This is your group scratch space' else group_info.text)
+    group_editing.text = group_info.text
 
   divSize = group_size(members.length or 1) # ghost group is size 1
 
   DIV
     id: gid
-    className: (if tawk.drag.over == gid then 'dark-gray' else 'light-gray')
+    
     style:
-      float: 'left'
-      margin: '20px'
-      borderRadius: '15px'
-      minWidth: divSize.width * tawk.dimensions.person_width + 'px'
-      maxWidth: divSize.width * tawk.dimensions.person_width + 'px'
+      display: 'inline-block'
+      verticalAlign: 'top'
+      margin: 20
+      borderRadius: 15
+      overflow: if !tawk.drag.dragging then 'hidden'
+      minWidth: divSize.width * tawk.dimensions.person_width
+      maxWidth: divSize.width * tawk.dimensions.person_width
+
       # Height varies depending on size of textarea
       # Div around people sets height of that portion
 
+    className: if tawk.drag.over == gid then 'dark-gray' else 'light-gray'
     onMouseEnter: (e) ->
       tawk['/connection'].mouseover = gid
 
@@ -223,9 +233,8 @@ dom.GROUP = ->
         if user != null
           PERSON
             person: user
-            borders: choose_borders(index, divSize)
             position: abs_position_in_group(index, divSize, tawk.dimensions)
-    if members.length
+    if members.length && !tawk.scratch_disabled
       GROWING_TEXTAREA
         className: 'form-control'
         rows: 2
@@ -237,6 +246,7 @@ dom.GROUP = ->
           borderBottomRightRadius: '15px'
           outline: 'none'
           border: '1px solid #aaa'
+        placeholder: 'This is your group scratch space'
         value: group_editing.text
         onChange: (e) ->
           group_editing.text = e.target.value
@@ -264,7 +274,6 @@ dom.GROUP.refresh = ->
 
 dom.PERSON = ->
   person = @props.person
-  borders = @props.borders
   top = @props.position.top
   left = @props.position.left
   me = tawk['/connection']
@@ -299,7 +308,7 @@ dom.PERSON = ->
             transform: transform
             width: '100%'
             height: height + 'px'
-          onDoubleClick: =>
+          onDoubleClick: if person.id == me.id then =>
             me.flip_y = not me.flip_y
           VIDEO
             autoPlay: 'true'
@@ -308,10 +317,8 @@ dom.PERSON = ->
               position: 'relative'
               height: '100%'
               width: '100%'
-              zIndex: '-1'
-              # These properties are flipped horizontally because the div is flipped horizontally
-              borderTopLeftRadius: (if borders.topRight then '10px' else '')
-              borderTopRightRadius: (if borders.topLeft then '10px' else '')
+              zIndex: -1
+              opacity: .9999 # http://stackoverflow.com/questions/5736503
       else
         DIV
           style:
@@ -321,8 +328,7 @@ dom.PERSON = ->
             textAlign: 'center'
             fontSize: (height / 180) + 'em'
             textColor: 'white'
-            borderTopLeftRadius: (if borders.topLeft then '10px' else '')
-            borderTopRightRadius: (if borders.topRight then '10px' else '')
+
           DIV {},
             DIV
               person.name
@@ -338,7 +344,7 @@ dom.PERSON = ->
             position: 'absolute'
             bottom: 0
             right: 0
-            height: stream.volume + 'px'
+            height: height * stream.volume / 100
             width: '20px'
             borderLeft: '5px solid #7FFF00'
           AUDIO
@@ -394,32 +400,30 @@ dom.AV_CONTROL_BAR = ->
   DIV
     style:
       position: 'absolute'
-      width: '100%'
-      bottom: '0'
-      left: '0'
-      zIndex: '100'
+      bottom: 0
+      right: 0
+      zIndex: 100
       textAlign: 'right'
     BUTTON
-      className: 'btn btn-' + (if me.video then 'default' else 'danger')
-      SPAN
-        className: 'fa fa-video-camera' + (if me.video then '' else '-slash')
+      className: 'btn btn-' + (if me.video then 'default' else 'danger') + \
+                ' fa fa-video-camera' + (if me.video then '' else '-slash')
       onClick: (e) ->
         if me.video
-          plugin_handle and plugin_handle.muteVideo()
+          plugin_handle?.muteVideo()
           me.video = false
         else
-          plugin_handle and plugin_handle.unmuteVideo()
+          plugin_handle?.unmuteVideo()
           me.video = true
+
     BUTTON
-      className: 'btn btn-' + (if me.audio then 'default' else 'danger')
-      SPAN
-        className: 'fa fa-microphone' + (if me.audio then '' else '-slash')
+      className: 'btn btn-' + (if me.audio then 'default' else 'danger') + \
+                ' fa fa-microphone' + (if me.audio then '' else '-slash')
       onClick: (e) ->
         if me.audio
-          plugin_handle and plugin_handle.muteAudio()
+          plugin_handle?.muteAudio()
           me.audio = false
         else
-          plugin_handle and plugin_handle.unmuteAudio()
+          plugin_handle?.unmuteAudio()
           me.audio = true
 
 dom.AV_VIEW_BAR = ->
@@ -467,12 +471,6 @@ group_size = (num_people) ->
     height: floor
     width: ceil
 
-choose_borders = (index, divSize) ->
-  x = index % divSize.width
-  y = Math.floor(index / divSize.width)
-
-  topLeft: (x == 0 and y == 0)
-  topRight: (x == divSize.width - 1 and y == 0)
 
 abs_position_in_group = (index, divSize, dimensions) ->
   x = index % divSize.width
