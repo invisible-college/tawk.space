@@ -205,18 +205,17 @@ dom.HEARTBEAT = ->
  
  
 dom.AUTOSIZEBOX = ->
-  @props.style.resize = if @props.style.width then 'none' else 'horizontal'
+  @props.style.resize = if @props.style.width or @props.cols then 'none' else 'horizontal'
   TEXTAREA
     ref: 'textbox'
     rows: 1
+    cols: @props.cols
     placeholder: @props.placeholder
     onKeyDown: (e) =>@props.onKeyDown?(e)
     onChange: (e) => @props.onChange?(e)
     className: @props.className
     style: @props.style
     value: @props.value
-    resize: false  # infinite loop can be triggered if you resize manually,
-                   # and then trigger auto resize by typing
 
 resizebox = (target) ->
   target.style.height = null
