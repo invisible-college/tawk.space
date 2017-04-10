@@ -196,11 +196,6 @@ dom.GROUP = ->
   gid = @props.gid
   members = tawk['group/' + gid].members or []
 
-  group_info = tawk['/group/' + gid]
-  group_editing = tawk['editing-' + gid]
-  if not group_editing.timer
-    group_editing.text = group_info.text
-
   divSize = group_size(members.length or 1) # ghost group is size 1
 
   DIV
@@ -210,7 +205,7 @@ dom.GROUP = ->
       display: 'inline-block'
       verticalAlign: 'top'
       margin: 20
-      borderRadius: 15
+      borderRadius: '15px 15px 4px 4px'
       overflow: if !tawk.drag.dragging then 'hidden'
       minWidth: divSize.width * tawk.dimensions.person_width
       maxWidth: divSize.width * tawk.dimensions.person_width
@@ -234,28 +229,18 @@ dom.GROUP = ->
           PERSON
             person: user
             position: abs_position_in_group(index, divSize, tawk.dimensions)
+
     if members.length && !tawk.scratch_disabled
-      GROWING_TEXTAREA
-        className: 'form-control'
-        rows: 2
+
+      AUTOSIZEBOX
+        value: if tawk['/group' + gid].text? then tawk['/group' + gid].text
+        placeholder: 'This is your group scratch space'
         style:
-          clear: 'both'
           width: '100%'
           backgroundColor: 'inherit'
-          borderBottomLeftRadius: '15px'
-          borderBottomRightRadius: '15px'
           outline: 'none'
           border: '1px solid #aaa'
-        placeholder: 'This is your group scratch space'
-        value: group_editing.text
-        onChange: (e) ->
-          group_editing.text = e.target.value
-          if group_editing.timer
-            clearTimeout group_editing.timer
-          group_editing.timer = setTimeout ->
-            group_editing.timer = null
-            group_info.text = group_editing.text
-          , 500
+        onChange: (e) -> tawk['/group' + gid].text = e.target.value
 
 dom.GROUP.refresh = ->
   gid = @props.gid
@@ -414,6 +399,7 @@ dom.AV_CONTROL_BAR = ->
         else
           plugin_handle?.unmuteVideo()
           me.video = true
+        return
 
     BUTTON
       className: 'btn btn-' + (if me.audio then 'default' else 'danger') + \
@@ -425,6 +411,7 @@ dom.AV_CONTROL_BAR = ->
         else
           plugin_handle?.unmuteAudio()
           me.audio = true
+        return
 
 dom.AV_VIEW_BAR = ->
   person = @props.person
