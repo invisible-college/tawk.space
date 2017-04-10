@@ -196,6 +196,8 @@ dom.GROUP = ->
   gid = @props.gid
   members = tawk['group/' + gid].members or []
 
+  me = tawk['/connection']
+  me_in_group = me.id in (m.id for m in members)
   divSize = group_size(members.length or 1) # ghost group is size 1
 
   DIV
@@ -219,6 +221,9 @@ dom.GROUP = ->
 
     onMouseLeave: (e) ->
       tawk['/connection'].mouseover = null
+
+    if me_in_group && tawk.dimensions.person_width < 100 # render the AV controls above the group if people are really small
+      AV_CONTROL_BAR above: true 
 
     DIV
       style:
@@ -279,7 +284,7 @@ dom.PERSON = ->
         width: width + 'px'
         cursor: (if person.id == me.id then 'pointer' else '')
         opacity: (if should_hear_fully(person, me) then 1.0 else 0.5)
-      if person.id == me.id
+      if person.id == me.id && width > 100
         AV_CONTROL_BAR()
       else
         AV_VIEW_BAR
@@ -386,11 +391,11 @@ dom.AV_CONTROL_BAR = ->
   me = tawk['/connection']
   DIV
     style:
-      position: 'absolute'
-      bottom: 0
-      right: 0
+      position: if @props.above then 'relative' else 'absolute'
+      bottom: if !@props.above then 0
+      right: if !@props.above then 0
       zIndex: 100
-      textAlign: 'right'
+      textAlign: if @props.above then 'right' else 'center'
 
 
     AV_BUTTON
@@ -432,13 +437,15 @@ dom.AV_VIEW_BAR = ->
       right: 0
       zIndex: 100
       textAlign: 'right'
-    if not person.audio
+    if not person.audio 
       AV_BUTTON
         disabled: 'disabled'
         danger: true
+        dummy: tawk.dimensions.person_width # needed with react diffing algo, otherwise child component won't get rerendered
         MIC_ICON
           on: false
-          width: 16
+          width: if tawk.dimensions.person_width > 100 then 16 else 4
+
 
 danger_red = '#d43f3a'
 dom.AV_BUTTON = ->
