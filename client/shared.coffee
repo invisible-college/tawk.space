@@ -204,6 +204,32 @@ dom.HEARTBEAT = ->
   SPAN null
  
  
+dom.AUTOSIZEBOX = ->
+  TEXTAREA
+    ref: 'textbox'
+    rows: 1
+    placeholder: @props.placeholder
+    onKeyDown: (e) =>@props.onKeyDown?(e)
+    onChange: (e) => @props.onChange?(e)
+    className: @props.className
+    style: @props.style
+    value: @props.value
+    resize: false  # infinite loop can be triggered if you resize manually,
+                   # and then trigger auto resize by typing
+
+resizebox = (target) ->
+  while(target.rows > 1 && target.scrollHeight < target.offsetHeight)
+    target.rows--
+  while(target.scrollHeight > target.offsetHeight)
+    target.rows++
+    if target.rows > 10000
+      console.error 'Infinite loop detected in AUTOSIZEBOX. Exiting.'
+      return
+
+dom.AUTOSIZEBOX.up      = -> resizebox(@refs.textbox.getDOMNode())
+dom.AUTOSIZEBOX.refresh = -> resizebox(@refs.textbox.getDOMNode())
+
+
 # Auto growing text area. 
 # Transfers props to a TEXTAREA.
 dom.GROWING_TEXTAREA = ->
