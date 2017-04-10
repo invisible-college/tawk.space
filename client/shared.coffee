@@ -205,6 +205,7 @@ dom.HEARTBEAT = ->
  
  
 dom.AUTOSIZEBOX = ->
+  @props.style.resize = if @props.style.width then 'none' else 'horizontal'
   TEXTAREA
     ref: 'textbox'
     rows: 1
@@ -218,13 +219,11 @@ dom.AUTOSIZEBOX = ->
                    # and then trigger auto resize by typing
 
 resizebox = (target) ->
+  target.style.height = null
   while(target.rows > 1 && target.scrollHeight < target.offsetHeight)
     target.rows--
   while(target.scrollHeight > target.offsetHeight)
     target.rows++
-    if target.rows > 10000
-      console.error 'Infinite loop detected in AUTOSIZEBOX. Exiting.'
-      return
 
 dom.AUTOSIZEBOX.up      = -> resizebox(@refs.textbox.getDOMNode())
 dom.AUTOSIZEBOX.refresh = -> resizebox(@refs.textbox.getDOMNode())
