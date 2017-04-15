@@ -574,9 +574,10 @@ window.publish_local_stream = ({audio, video}) ->
         jsep: jsep
     error: (error) ->
       if audio
-        audio = false
         console.error 'no_camera', 'No camera allowed', 'Trying audio-only mode', error
-        publish_local_stream()
+        publish_local_stream
+          audio: false
+          video: video
       else
         console.error 'no_camera', 'No camera or microphone allowed', 'You are a listener', error
 
