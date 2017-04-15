@@ -334,7 +334,7 @@ dom.PERSON = ->
             position: 'absolute'
             bottom: 0
             right: 0
-            height: height * stream.volume / 100
+            height: height * stream.volume / 180
             width: '20px'
             borderLeft: '5px solid #7FFF00'
           AUDIO
