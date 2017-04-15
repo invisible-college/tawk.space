@@ -207,7 +207,7 @@ dom.GROUP = ->
       display: 'inline-block'
       verticalAlign: 'top'
       margin: 20
-      borderRadius: '15px 15px 4px 4px'
+      borderRadius: '15px 15px 15px 15px'
       overflow: if !tawk.drag.dragging then 'hidden'
       minWidth: divSize.width * tawk.dimensions.person_width
       maxWidth: divSize.width * tawk.dimensions.person_width
@@ -244,7 +244,8 @@ dom.GROUP = ->
           width: '100%'
           backgroundColor: 'inherit'
           outline: 'none'
-          border: '1px solid #aaa'
+          padding: '0.5em'
+          borderRadius: '0 0 15px 15px'
         onChange: (e) -> tawk['/group' + gid].text = e.target.value
 
 dom.GROUP.refresh = ->
