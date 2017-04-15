@@ -1,18 +1,12 @@
 var express = require('express')
-var bus = require('statebus/server')({
-    full_node: true,
+var bus = require('statebus').serve({
     file_store: false,
-    client: function(cbus) {
-        cbus.route_defaults_to(bus);
-    },
 });
 
 bus.http.use(express.static(__dirname + '/'))
 bus.http.use(express.static(__dirname + '/../janus-gateway/html/'))
 
-function sendIndexHtml(req, res) {
+bus.http.get('/:id', function(req, res) {
   res.sendFile('index.html', {root: __dirname});
-}
-
-bus.http.get('/:id', sendIndexHtml);
+});
 
