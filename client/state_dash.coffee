@@ -24,7 +24,7 @@ parse_key = (key) ->
   return has_match and {owner, 'new': is_new, name, number}
 
 dom.STATE_DASH = ->
-  dash = fetch('state_dash')
+  dash = bus.fetch('state_dash')
 
   if !dash.on?
     dash.on = false 
@@ -34,7 +34,7 @@ dom.STATE_DASH = ->
   if dash.filter?.match(/idkfa/) or dash.filter?.match(/idmap/)
     dash.on = false
     dash.filter = ''
-    save(dash)
+    bus.save(dash)
 
   if not dash.on
     return DIV null, ''
@@ -57,7 +57,7 @@ dom.STATE_DASH = ->
       if not p.name in dashable_keys then return null
 
       tree[p.owner][p.name] ||= []
-      tree[p.owner][p.name][p.number or null] = fetch(key)
+      tree[p.owner][p.name][p.number or null] = bus.fetch(key)
 
     for key of cache
       add_key(key)
@@ -90,7 +90,7 @@ dom.STATE_DASH = ->
     dash.filter = e.target.value
     if dash.filter.length == 0
       dash.filter = null
-    save(dash)
+    bus.save(dash)
     true
 
 
@@ -163,7 +163,7 @@ dom.STATE_DASH = ->
                     key: field
                     onClick: do (key, field) => (evt) =>
                       @local.editing = {key_:key, field:field}
-                      save(@local)
+                      bus.save(@local)
                       setTimeout(=> @refs.dash_input.getDOMNode().focus())
                     if (@local.editing \
                         and @local.editing.key_ == key \
@@ -178,14 +178,14 @@ dom.STATE_DASH = ->
                             try
                               val = JSON.parse(@refs.dash_input.getDOMNode().value)
                               cache[@local.editing.key_][@local.editing.field] = val
-                              save(cache[@local.editing.key_])
+                              bus.save(cache[@local.editing.key_])
                               event.stopPropagation()
 
-                              delete @local.editing.error; save(@local)
+                              delete @local.editing.error; bus.save(@local)
                             catch e
-                              @local.editing.error = true; save(@local)
+                              @local.editing.error = true; bus.save(@local)
                           onBlur: (event) =>
-                            delete @local.editing; save(@local)
+                            delete @local.editing; bus.save(@local)
                           style:
                             position: 'absolute'
                             backgroundColor: '#faa' if @local.editing.error
@@ -195,14 +195,14 @@ dom.STATE_DASH = ->
                         #     try
                         #       val = JSON.parse(@refs.dash_input.getDOMNode().value)
                         #       cache[@local.editing.key_][@local.editing.field] = val
-                        #       save(cache[@local.editing.key_])
-                        #       c = fetch('component/1')
+                        #       bus.save(cache[@local.editing.key_])
+                        #       c = bus.fetch('component/1')
                         #       delete c.editing
-                        #       save(c)
+                        #       bus.save(c)
                         #       event.stopPropagation()
                         #     catch e
                         #       @local.editing.error = true
-                        #       save(@local)
+                        #       bus.save(@local)
                         #   style:
                         #     position: 'absolute'
                         #     marginTop: 30
@@ -223,7 +223,7 @@ dom.STATE_DASH = ->
         DIV {key: owner},
           for name in names.sort()
             do (owner, name) ->
-              f = -> dash.selected={owner, name, number:null}; save(dash)
+              f = -> dash.selected={owner, name, number:null}; bus.save(dash)
               style = (name == dash.selected.name) and {'background-color':'#aaf'} or {}
               DIV onMouseEnter: f, key: name, style: style,
                 prefix + name
@@ -241,12 +241,12 @@ window.addEventListener('DOMContentLoaded', ->
     # console.log('recent keys:', recent_keys)
     if key==4 or "#{recent_keys}" == "#{[105, 100, 109, 97, 112]}" \ # idmap
               or "#{recent_keys}" == "#{[105, 100, 107, 102, 97]}"   # idkfa
-      dash = fetch('state_dash')
+      dash = bus.fetch('state_dash')
       if dash.on
         dash.on = false
       else
         dash.on = true
-      save(dash)
+      bus.save(dash)
       # setTimeout =>
       #   console.log @refs
       #   @refs.search.getDOMNode().focus()
@@ -258,7 +258,7 @@ get_search_results = ->
   #   { key_matches: {...a cache filtered to matching keys... }
   #     data_matches: {...a cache filtered to matching data...} }
 
-  dash = fetch('state_dash')
+  dash = bus.fetch('state_dash')
   matches = {}
   key_matches = {}
   data_matches = {}
@@ -281,9 +281,9 @@ get_search_results = ->
 #   el.innerHTML = rainbows(el.innerHTML)
 
 reset_selection = () ->
-  dash = fetch('state_dash')
+  dash = bus.fetch('state_dash')
   dash.selected = {owner: null, name: null, number: null}
-  save(dash)
+  bus.save(dash)
 
 rainbows = (json) ->
   json = json.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')

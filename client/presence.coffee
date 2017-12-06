@@ -1,7 +1,7 @@
 IDLE_THRESHOLD = 1000 * 60 * 5 # 5 minute idle period
  
 connection_shares_space = (other_conn) ->
-  conn = fetch '/connection'
+  conn = bus.fetch '/connection'
  
   conn.client != other_conn.client && \
   conn.location?.host == other_conn.location?.host && \
@@ -10,20 +10,20 @@ connection_shares_space = (other_conn) ->
  
 connections_sharing_space = (filter) ->
   filter ||= connection_shares_space
-  connections = fetch('/connections').all or []
-  conn = fetch '/connection'
+  connections = bus.fetch('/connections').all or []
+  conn = bus.fetch '/connection'
    
   (c for c in connections when conn.client != c.client && filter(c))
  
 dom.WHO_IS_HERE = ->
   connections = connections_sharing_space()
-  conn = fetch('/connection')
+  conn = bus.fetch('/connection')
  
   connections.sort sort_by_colors
  
   connections.push conn
  
-  tawk_conn = tawkbus?.fetch('/connection')
+  tawk_conn = tawkbus?.bus.fetch('/connection')
  
   avatar_size = 44
   avatar_separation = 28
@@ -33,7 +33,7 @@ dom.WHO_IS_HERE = ->
       height: avatar_size 
  
     HEARTBEAT
-      public_key: fetch('other_users_pulse').key
+      public_key: bus.fetch('other_users_pulse').key
       interval: 5000
  
     UL
@@ -60,7 +60,7 @@ dom.WHO_IS_HERE = ->
  
           if c.client == conn.client && tawk_conn && tawk_conn.video
             VIDEO 
-              src: tawkbus.fetch("stream/#{tawk_conn.id}").url
+              src: tawkbus.bus.fetch("stream/#{tawk_conn.id}").url
               style: 
                 width: avatar_size
                 height: avatar_size
@@ -88,14 +88,14 @@ dom.WHO_IS_HERE = ->
  
  
 dom.CURSORS = ->
-  all_conn = fetch '/connections'
+  all_conn = bus.fetch '/connections'
  
   DIV
     style: 
       zIndex: 99999
  
     HEARTBEAT
-      public_key: fetch('pulse').key
+      public_key: bus.fetch('pulse').key
       interval: 5000
  
     for c in connections_sharing_space()
@@ -190,7 +190,7 @@ connection_is_dirty = false
 setInterval ->
   if connection_is_dirty
     conn = bus.cache['/connection']
-    save conn 
+    bus.save conn 
     connection_is_dirty = false
 , 150
  
@@ -208,22 +208,22 @@ wait_for_bus = (cb) ->
  
 wait_for_bus ->
   init_conn = bus.reactive ->
-    conn = fetch('/connection')
-    connections = fetch('/connections')
+    conn = bus.fetch('/connection')
+    connections = bus.fetch('/connections')
  
     if conn.client?
  
       colors = (c.color for c in connections.all when c.color && c.client != conn.client)
  
       if !conn.color? || conn.color.indexOf('hsl') == -1 || (colors.indexOf(conn.color) > -1 && colors.length < 360)
-        conn.color = get_next_color(fetch('/connections').all)
-        save conn
+        conn.color = get_next_color(bus.fetch('/connections').all)
+        bus.save conn
       if conn.user? && conn.user.name != conn.name
         conn.name = conn.user.name 
-        save conn 
+        bus.save conn 
       else if !conn.invisible_name?
         conn.invisible_name = random_name()
-        save conn
+        bus.save conn
  
   init_conn()
  
@@ -270,7 +270,7 @@ dom.RAINBOW = ->
         onChange: (e) =>
           @local.num = parseInt(e.target.value or 25)
           delete @local.colors
-          save @local
+          bus.save @local
  
       INPUT 
         type: 'text'
@@ -279,7 +279,7 @@ dom.RAINBOW = ->
         onChange: (e) =>
           @local.s = parseInt(e.target.value or .5)
           delete @local.colors
-          save @local
+          bus.save @local
  
       INPUT 
         type: 'text'
@@ -288,7 +288,7 @@ dom.RAINBOW = ->
         onChange: (e) =>
           @local.l = parseInt(e.target.value or .5)
           delete @local.colors
-          save @local
+          bus.save @local
  
  
  
@@ -349,8 +349,8 @@ get_next_hue = (hue_distribution) ->
 wait_for_bus ->
  
   shadow_loc = bus.reactive ->
-    loc = fetch 'location'
-    conn = fetch '/connection'
+    loc = bus.fetch 'location'
+    conn = bus.fetch '/connection'
  
     conn.location = {}
     for k,v of loc when k != 'key'
@@ -370,7 +370,7 @@ onTouchUpdate = (e) -> update_position e, e.touches[0].pageX, e.touches[0].pageY
 matching_attr_whitelist = ['id', 'data-component', 'data-key', 'class', 'href', 'src']
 matching_attr_blacklist = ['data-reactid', 'style', 'disabled']
 update_position = (e,x,y) ->
-  conn = fetch '/connection'
+  conn = bus.fetch '/connection'
  
   target = e.target 
   path = []
@@ -433,7 +433,7 @@ document.addEventListener('touchmove', onTouchUpdate, false)
 #############################
 # Track key presses
 document.addEventListener 'keypress', ->
-  conn = fetch '/connection'
+  conn = bus.fetch '/connection'
   conn.last_seen = (new Date()).getTime()
   connection_is_dirty = true 
 , false

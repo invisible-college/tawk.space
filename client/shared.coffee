@@ -194,11 +194,11 @@ window.getCoords = (el) ->
 #   public_key: the key to store the heartbeat at
 #   interval: length between pulses, in ms (default=1000)
 dom.HEARTBEAT = ->  
-  beat = fetch(@props.public_key or 'pulse')
+  beat = bus.fetch(@props.public_key or 'pulse')
   if !beat.beat?
     setInterval ->   
       beat.beat = (beat.beat or 0) + 1
-      save(beat)
+      bus.save(beat)
     , (@props.interval or 1000)
  
   SPAN null
@@ -240,7 +240,7 @@ dom.GROWING_TEXTAREA = ->
   @props.style.resize ||= 'none'
   @props.style.outline ||= 'none'
  
-  # save the supplied onChange function if the client supplies one
+  # bus.save the supplied onChange function if the client supplies one
   _onChange = @props.onChange   
   _onClick = @props.onClick
  
@@ -260,7 +260,7 @@ dom.GROWING_TEXTAREA = ->
  
       if h != @local.height
         @local.height = h
-        save @local
+        bus.save @local
     else
       min_height = @props.style.minHeight
       max_height = @props.style.maxHeight
@@ -279,7 +279,7 @@ dom.GROWING_TEXTAREA = ->
  
         if h != @local.height
           @local.height = h
-          save @local
+          bus.save @local
  
     @last_value = textarea.value
  

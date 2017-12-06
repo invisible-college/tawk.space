@@ -4,7 +4,7 @@
 # Hire Earl to handle the browser history & location bar. 
 #
 # When your web application is loaded, Earl will update your application's 
-# fetch('location') state with the url, params, and anchor. Your application 
+# bus.fetch('location') state with the url, params, and anchor. Your application 
 # can simply react to location state changes as it would any other state change. 
 #
 # If your application changes the location state, Earl will dutifully update 
@@ -24,7 +24,7 @@
 #
 #
 # Aside from the public API, you can communicate with Earl through this state:
-#    fetch('location')
+#    bus.fetch('location')
 #         url: the current browser location
 #         query_params: browser search values (e.g. blah?foo=fab&bar=nice)
 #         hash: the anchor tag (if any) in the link. e.g. blah.html#hash
@@ -66,7 +66,7 @@ window.Earl =
  
   # Updating the browser window location. 
   load_page: (url, query_params) ->
-    loc = fetch('location')
+    loc = bus.fetch('location')
     loc.host = window.location.host
     loc.query_params = query_params or {}
  
@@ -94,7 +94,7 @@ window.Earl =
  
     loc.url = url or '/'
     loc.hash = hash
-    save loc
+    bus.save loc
  
  
  
@@ -164,12 +164,12 @@ if hist_aware
  
 # Earl's Reactive nerves keep him vigilant in making sure that changes in location
 # state are reflected in the browser history. Earl also updates the window title 
-# for you, free of charge, if you set fetch('location').title.
+# for you, free of charge, if you set bus.fetch('location').title.
  
 react_to_location = ->
   monitor = bus.reactive ->
  
-    loc = fetch 'location'
+    loc = bus.fetch 'location'
  
     # Update the window title if it has changed
     title = location.title or document.title
@@ -214,7 +214,7 @@ url_from_browser_location = ->
   "#{loc}#{search}#{location.hash}"
  
 url_from_statebus = ->
-  loc = fetch 'location'
+  loc = bus.fetch 'location'
  
   relative_url = loc.url or '/'
  

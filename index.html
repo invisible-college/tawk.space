@@ -64,7 +64,7 @@ get_space = ->
   <meta content='Social video chats. Tawk is simple and flexible -- there is no login, and each space can have multiple chat groups.' name="description">
 
   <title>Tawk Space</title>
-  <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/adapterjs/0.14.1/adapter.min.js" ></script>
+  <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/webrtc-adapter/5.0.4/adapter.min.js" ></script>
 
   <script src='https://code.jquery.com/jquery-2.1.4.min.js'></script>
   <script src='https://code.jquery.com/ui/1.11.4/jquery-ui.min.js'></script>
@@ -82,7 +82,7 @@ get_space = ->
     .dark-gray { background-color: #BFBFBF }
   </style>
 </head>
-<script src="https://stateb.us/client6.js" server="state://tawk.space"></script>
+<script src="https://stateb.us/client6.js" server="state://tawk.space" globals="false"></script>
 <script src="/janus.js" ></script>
 <script src="/client/shared.coffee"></script>
 <script src="/client/earl.coffee"></script>

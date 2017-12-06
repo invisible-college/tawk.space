@@ -1,4 +1,5 @@
 plugin_handle = null
+streams = {}
 
 ###############################################################################
 # Client Bus (all state prefixed with tawk/)
@@ -294,7 +295,6 @@ dom.PERSON = ->
             me.flip_y = not me.flip_y
           VIDEO
             autoPlay: 'true'
-            src: stream.url
             style:
               position: 'relative'
               height: '100%'
@@ -331,7 +331,6 @@ dom.PERSON = ->
             borderLeft: '5px solid #7FFF00'
           AUDIO
             autoPlay: 'true'
-            src: stream.url
 
 dom.PERSON.refresh = ->
   person = @props.person
@@ -348,9 +347,13 @@ dom.PERSON.refresh = ->
   vids = @getDOMNode().getElementsByTagName('video')
   if vids.length
     vids[0].volume = 0
+    if vids[0].srcObject != streams[person.id]
+      vids[0].srcObject = streams[person.id]
   auds = @getDOMNode().getElementsByTagName('audio')
   if auds.length
     auds[0].volume = volume
+    if auds[0].srcObject != streams[person.id]
+      auds[0].srcObject = streams[person.id]
 
   if me.id == person.id
     $(@getDOMNode().querySelector('.person')).draggable
@@ -534,8 +537,8 @@ abs_position_in_group = (index, divSize, dimensions) ->
 
 recieved_stream = (stream, person_id) ->
   # Put stream (url) in state so the audio/video can be rendered
+  streams[person_id] = stream
   sb['tawk/stream/' + person_id] =
-    url: URL.createObjectURL(stream)
     volume: 0
 
   # Save volume we receive for each stream to render as a green bar
@@ -592,7 +595,7 @@ sb['tawk/id'] (string, required): An identifier for the connection that must be 
     for every user.
 
 State exported:
-sb['tawk/streams/' + id] -> {
+sb['tawk/stream/' + id] -> {
   url: A blob url for the stream. It can be used in audio or video tags with src: url
   volume: On a scale from 0-100, how loud is the user speaking.
       Volume tries to reflect human speech, and ignore static background noise.
