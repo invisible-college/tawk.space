@@ -96,8 +96,8 @@ window.statebus_ready.push ->
       person_width = person_height * 4 / 3
 
     _:
-      person_height: Math.round(person_height)
-      person_width: Math.round(person_width)
+      person_height: Math.round(person_height * 1.5)
+      person_width: Math.round(person_width * 1.5)
 
   bus('tawk/window').to_fetch = (key) ->
     _:
