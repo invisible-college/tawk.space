@@ -5,6 +5,9 @@ streams = {}
 # Client Bus (all state prefixed with tawk/)
 ###############################################################################
 
+server       = 'state://tawk.space'
+janus_server = 'https://tawk.space:8089/janus'
+
 window.statebus_ready or= []
 window.statebus_ready.push ->
   sb['tawk/janus_initialized'] = false
@@ -15,7 +18,7 @@ window.statebus_ready.push ->
     throw new Error("Cannot save #{obj.key}")
 
   bus('tawk/connections').to_fetch = (key) ->
-    _: sb['state://tawk.space/connections'].all or []
+    _: sb[server + '/connections'].all or []
 
   bus('tawk/connections').to_save = unsavable
 
@@ -65,7 +68,7 @@ window.statebus_ready.push ->
     _: count
 
   bus('tawk/dimensions').to_fetch = (key) ->
-    connections = sb['state://tawk.space/connections']
+    connections = sb[server + '/connections']
     active_connections = sb['tawk/active_connections']
 
     screen_width = sb['tawk/window'].width
@@ -96,8 +99,8 @@ window.statebus_ready.push ->
       person_width = person_height * 4 / 3
 
     _:
-      person_height: Math.round(person_height)
-      person_width: Math.round(person_width)
+      person_height: Math.round(person_height * 1.5)
+      person_width: Math.round(person_width * 1.5)
 
   bus('tawk/window').to_fetch = (key) ->
     _:
@@ -151,8 +154,8 @@ dom.TAWK = ->
 
   # Have to make sure we get all connections to choose
   # whether to join the first group
-  connections = sb['state://tawk.space/connections']
-  me = sb['state://tawk.space/connection']
+  connections = sb[server + '/connections']
+  me = sb[server + '/connection']
   if @loading()
     return DIV {}, 'Loading...'
 
@@ -189,7 +192,7 @@ dom.GROUP = ->
   gid = @props.gid
   members = sb['tawk/group/' + gid].members or []
 
-  me = sb['state://tawk.space/connection']
+  me = sb[server + '/connection']
   me_in_group = me.id in (m.id for m in members)
   divSize = group_size(members.length or 1) # ghost group is size 1
 
@@ -210,10 +213,10 @@ dom.GROUP = ->
 
     className: if sb['tawk/drag'].over == gid then 'dark-gray' else 'light-gray'
     onMouseEnter: (e) ->
-      sb['state://tawk.space/connection'].mouseover = gid
+      sb[server + '/connection'].mouseover = gid
 
     onMouseLeave: (e) ->
-      sb['state://tawk.space/connection'].mouseover = null
+      sb[server + '/connection'].mouseover = null
 
     if me_in_group && sb['tawk/dimensions'].person_width < 100 # render the AV controls above the group if people are really small
       AV_CONTROL_BAR above: true
@@ -230,7 +233,7 @@ dom.GROUP = ->
 
     if members.length && !sb['tawk/scratch_disabled']
       AUTOSIZEBOX
-        value: if sb['state://tawk.space/group/' + gid].text? then sb['state://tawk.space/group/' + gid].text
+        value: if sb[server + '/group/' + gid].text? then sb[server + '/group/' + gid].text
         placeholder: 'This is your group scratch space'
         style:
           width: '100%'
@@ -238,7 +241,7 @@ dom.GROUP = ->
           outline: 'none'
           padding: '0.5em'
           borderRadius: '0 0 15px 15px'
-        onChange: (e) -> sb['state://tawk.space/group/' + gid].text = e.target.value
+        onChange: (e) -> sb[server + '/group/' + gid].text = e.target.value
 
 dom.GROUP.refresh = ->
   gid = @props.gid
@@ -259,7 +262,7 @@ dom.PERSON = ->
   person = @props.person
   top = @props.position.top
   left = @props.position.left
-  me = sb['state://tawk.space/connection']
+  me = sb[server + '/connection']
   stream = sb['tawk/stream/' + person.id]
   height = sb['tawk/dimensions'].person_height
   width = sb['tawk/dimensions'].person_width
@@ -336,7 +339,7 @@ dom.PERSON.refresh = ->
   person = @props.person
   borders = @props.borders
   stream = sb['tawk/stream/' + person.id]
-  me = sb['state://tawk.space/connection']
+  me = sb[server + '/connection']
 
   volume = 0
   if person.id != me.id
@@ -383,7 +386,7 @@ dom.PERSON.refresh = ->
 
 
 dom.AV_CONTROL_BAR = ->
-  me = sb['state://tawk.space/connection']
+  me = sb[server + '/connection']
   DIV
     style:
       position: if @props.above then 'relative' else 'absolute'
@@ -653,7 +656,7 @@ window.initialize_janus = ({audio = true, video = true, on_join = window.publish
         alert "No WebRTC support in your browser. You must use Chrome, Firefox, or Edge"
 
       janus = new Janus(
-        server: 'https://tawk.space:8089/janus'
+        server: janus_server
         error: console.error
         success: ->
           # Connect to the videoroom plugin
