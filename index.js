@@ -1,5 +1,5 @@
 var bus = require('statebus').serve({file_store: false})
-var serve = (x,y) => bus.http.get(x, (r, res) => res.sendFile(__dirname+y))
+var serve = (route, file) => bus.http.get(route, (r, res) => res.sendFile(__dirname + file))
 
 serve('/janus.js', '/janus.js')
 serve('/hark.js',  '/node_modules/hark/hark.bundle.js')
