@@ -82,16 +82,16 @@ window.statebus_ready.push ->
     # when there are only a few people in the space
     if active_connections <= 1
       person_height = Math.max(screen_height - 60, person_height)
-      person_width = Math.max(screen_width / 2 - 60, person_width)
+      person_width = Math.max(screen_width - 60, person_width)
     else if active_connections <= 2
       person_height = Math.max(screen_height - 60, person_height)
-      person_width = Math.max(screen_width / 3 - 60, person_width)
+      person_width = Math.max(screen_width / 2 - 60, person_width)
     else if active_connections <= 4
       person_height = Math.max(screen_height / 2 - 60, person_height)
-      person_width = Math.max(screen_width / 3 - 60, person_width)
+      person_width = Math.max(screen_width / 2 - 60, person_width)
     else if active_connections <= 7
       person_height = Math.max(screen_height / 2 - 60, person_height)
-      person_width = Math.max(screen_width / 4 - 60, person_width)
+      person_width = Math.max(screen_width / 3 - 60, person_width)
 
     if person_height > person_width * 3 / 4
       person_height = person_width * 3 / 4
@@ -99,8 +99,8 @@ window.statebus_ready.push ->
       person_width = person_height * 4 / 3
 
     _:
-      person_height: Math.round(person_height * 1.5)
-      person_width: Math.round(person_width * 1.5)
+      person_height: Math.round(person_height)
+      person_width: Math.round(person_width)
 
   bus('tawk/window').to_fetch = (key) ->
     _:
