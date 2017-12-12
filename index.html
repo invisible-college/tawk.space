@@ -1,4 +1,12 @@
 <script type="statebus">
+bus('window').to_fetch = (key) ->
+  _:
+    width: window.innerWidth
+    height: window.innerHeight
+
+window.onresize = () ->
+  bus.dirty 'window'
+
 dom.BODY = ->
   localUser = sb['ls/localUser']
 
@@ -21,6 +29,8 @@ dom.BODY = ->
     TAWK
       name: localUser.name
       space: get_space()
+      height: sb['window'].height - 20 # for topbar
+      width: sb['window'].width
       video: true
       audio: true
 
