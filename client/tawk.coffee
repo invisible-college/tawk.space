@@ -71,27 +71,20 @@ window.statebus_ready.push ->
     connections = sb[server + '/connections']
     active_connections = sb['tawk/active_connections']
 
-    screen_width = sb['tawk/window'].width
-    screen_height = sb['tawk/window'].height
+    available_width = sb['tawk/width'] - 100 # Margin between groups and edge
+    available_height = sb['tawk/height'] - 100 # Some room for scratch space and margin with topbar
 
-    # 240 x 180 is the minimum
-    person_height = 36 # 180
-    person_width = 48 # 240
+    # Calculate dimensions based on if everybody is in one group
+    # Hacky way to render groups as big as possible: assume all in one group
+    # TODO(karth295): how well does this work with multiple groups,
+    # particularly because of the padding necessary between groups?
+    size_if_all_in_one_group = group_size(active_connections or 1)
+    estimated_width = available_width / size_if_all_in_one_group.width
+    estimated_height = available_height / size_if_all_in_one_group.height
 
-    # Hacky way to render groups as big as possible
-    # when there are only a few people in the space
-    if active_connections <= 1
-      person_height = Math.max(screen_height - 60, person_height)
-      person_width = Math.max(screen_width / 2 - 60, person_width)
-    else if active_connections <= 2
-      person_height = Math.max(screen_height - 60, person_height)
-      person_width = Math.max(screen_width / 3 - 60, person_width)
-    else if active_connections <= 4
-      person_height = Math.max(screen_height / 2 - 60, person_height)
-      person_width = Math.max(screen_width / 3 - 60, person_width)
-    else if active_connections <= 7
-      person_height = Math.max(screen_height / 2 - 60, person_height)
-      person_width = Math.max(screen_width / 4 - 60, person_width)
+    # 35 x 48 is the minimum
+    person_height = Math.max(estimated_height, 36)
+    person_width = Math.max(estimated_width, 48)
 
     if person_height > person_width * 3 / 4
       person_height = person_width * 3 / 4
@@ -99,16 +92,8 @@ window.statebus_ready.push ->
       person_width = person_height * 4 / 3
 
     _:
-      person_height: Math.round(person_height * 1.5)
-      person_width: Math.round(person_width * 1.5)
-
-  bus('tawk/window').to_fetch = (key) ->
-    _:
-      width: if sb['tawk/width'] > 0 then sb['tawk/width'] else window.innerWidth
-      height: if sb['tawk/height'] > 0 then sb['tawk/height'] else window.innerHeight
-
-  window.onresize = () ->
-    bus.dirty 'tawk/window'
+      person_height: Math.round(person_height)
+      person_width: Math.round(person_width)
 
 ###############################################################################
 # React render functions
@@ -125,6 +110,10 @@ space (string, default: ''): Identifier for the room.
 
 name (string, default: Randomly generated username): User's name
     Appears when hovering over a person.
+
+height (int, required): Height in pixels of widget
+
+width (int, required): Width in pixels of widget
 
 video (boolean, default: true): Whether to default publish video
 
@@ -178,9 +167,10 @@ dom.TAWK = ->
   DIV
     id: 'tawk'
     style:
-      height: 'auto'
-      minHeight: '85%'
+      height: sb['tawk/height']
+      width: sb['tawk/width']
       clear: 'both'
+      textAlign: 'center'
     for gid in sb['tawk/gids']
       GROUP
         gid: gid
@@ -202,7 +192,7 @@ dom.GROUP = ->
     style:
       display: 'inline-block'
       verticalAlign: 'top'
-      margin: 20
+      margin: '20px'
       borderRadius: '15px 15px 15px 15px'
       overflow: if !sb['tawk/drag'].dragging then 'hidden'
       minWidth: divSize.width * sb['tawk/dimensions'].person_width

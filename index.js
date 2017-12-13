@@ -1,12 +1,7 @@
-var express = require('express')
-var bus = require('statebus').serve({
-    file_store: false,
-});
+var bus = require('statebus').serve({file_store: false})
+var serve = (route, file) => bus.http.get(route, (r, res) => res.sendFile(__dirname + file))
 
-bus.http.use(express.static(__dirname + '/'))
-bus.http.use(express.static(__dirname + '/../janus-gateway/html/'))
-
-bus.http.get('/:id', function(req, res) {
-  res.sendFile('index.html', {root: __dirname});
-});
-
+serve('/janus.js', '/janus.js')
+serve('/hark.js',  '/node_modules/hark/hark.bundle.js')
+serve('/',         '/index.html')
+serve('/:id',      '/index.html')
