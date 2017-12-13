@@ -232,8 +232,8 @@ dom.GROUP = ->
             position: abs_position_in_group(index, divSize, sb['tawk/dimensions'])
 
     if members.length && !sb['tawk/scratch_disabled']
-      AUTOSIZEBOX
-        value: if sb[server + '/group/' + gid].text? then sb[server + '/group/' + gid].text
+      SYNCAREA
+        key_: server + '/group/' + gid
         placeholder: 'This is your group scratch space'
         style:
           width: '100%'
@@ -241,7 +241,6 @@ dom.GROUP = ->
           outline: 'none'
           padding: '0.5em'
           borderRadius: '0 0 15px 15px'
-        onChange: (e) -> sb[server + '/group/' + gid].text = e.target.value
 
 dom.GROUP.refresh = ->
   gid = @props.gid

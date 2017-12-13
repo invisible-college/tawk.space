@@ -287,3 +287,63 @@ dom.GROWING_TEXTAREA = ->
  
 dom.GROWING_TEXTAREA.refresh = ->
   @adjustHeight()
+
+
+# Auto growing text area with text that is synchronized between users.
+# Transfers props to a TEXTAREA.
+
+diffsyncs = {}
+
+addDiffSyncToTextArea = (t, channel) ->
+  save_me_jesus = =>
+    bus.save
+      key : channel
+      _ : t.value
+
+  ds = diffsyncs[channel]
+  if !ds
+    ds = diffsyncs[channel] = `{ options : {} }`
+  else
+    t.value = ds.prev_t.value
+    t.setSelectionRange(ds.prev_t.selectionStart, ds.prev_t.selectionEnd)
+  ds.prev_t = t
+  ds.options.ws_url = 'wss://invisible.college:' + diffsync.port
+  ds.options.channel = channel
+  ds.options.get_text = -> t.value
+  ds.options.get_range = -> [t.selectionStart, t.selectionEnd]
+  ds.options.on_text = (text, range) ->
+    t.value = text
+    console.log('CURSOR POS: ' + range[0] + ',' + range[1])
+    t.setSelectionRange(range[0], range[1])
+    save_me_jesus()
+  if !ds.client
+    ds.client = diffsync.create_client(ds.options)
+
+  t.onkeyup = ->
+    ds.client.on_change()
+    save_me_jesus()
+    resizebox(t)
+  t.onpaste = ->
+    setTimeout(->
+      ds.client.on_change()
+      save_me_jesus()
+      resizebox(t)
+    , 0)
+
+dom.SYNCAREA = ->
+  @props.style.resize = if @props.style.width or @props.cols then 'none' else 'horizontal'
+  TEXTAREA
+    ref: 'textbox'
+    rows: 1
+    cols: @props.cols
+    placeholder: @props.placeholder
+    className: @props.className
+    style: @props.style
+
+dom.SYNCAREA.up = ->
+  addDiffSyncToTextArea(@refs.textbox.getDOMNode(), @props.key_)
+  resizebox(@refs.textbox.getDOMNode())
+
+dom.SYNCAREA.refresh = ->
+  addDiffSyncToTextArea(@refs.textbox.getDOMNode(), @props.key_)
+  resizebox(@refs.textbox.getDOMNode())
