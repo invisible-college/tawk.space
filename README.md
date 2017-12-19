@@ -19,6 +19,29 @@ Tawk is mainly powered by two libraries:
 * Statebus: https://github.com/invisible-college/statebus
 * Janus WebRTC Gateway: https://github.com/meetecho/janus-gateway
 
+## Embed in your website
+
+Insert this code into your html somewhere:
+
+```html
+<script src="https://tawk.space/janus.js"></script>
+<script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/webrtc-adapter/5.0.4/adapter.min.js" ></script>
+<script src='https://tawk.space/hark.js'></script>
+<script src="https://invisible-college.github.io/diffsync/diffsync.js"></script>
+<script src="https://tawk.space/client/shared.coffee"></script>
+<script src="https://tawk.space/client/tawk.coffee"></script>
+```
+
+If you aren't using statebus already, include this too:
+```html
+<script src="https://stateb.us/client6.js"></script>
+```
+
+Now you can include a TAWK widget anywhere like this (in [statebus](https://wiki.invisible.college/statebus) code):
+```javascript
+TAWK({name: 'username', space: '/', height: 500, width: 500, video: true, audio: true})
+```
+
 ## Set up your own tawk instance
 Clone and set up the Janus WebRTC Gateway. You only need the video room plugin. Follow their documentation for detailed instructions and options. Here is what I did on Fedora:
 
