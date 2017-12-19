@@ -640,6 +640,7 @@ window.initialize_janus = ({audio = true, video = true, on_join = window.publish
                   room: 1234
 
   Janus.init
+    dependencies: Janus.useDefaultDependencies({fetch:window.og_fetch||window.fetch})
     callback: ->
       if not Janus.isWebrtcSupported()
         alert "No WebRTC support in your browser. You must use Chrome, Firefox, or Edge"
