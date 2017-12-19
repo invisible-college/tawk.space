@@ -32,12 +32,12 @@ Insert this code into your html somewhere:
 <script src="https://tawk.space/client/tawk.coffee"></script>
 ```
 
-If you aren't using statebus already, include this too:
+And if you aren't using statebus already, include this too:
 ```html
 <script src="https://stateb.us/client6.js"></script>
 ```
 
-Now you can include a TAWK widget anywhere like this (in [statebus](https://wiki.invisible.college/statebus) code):
+Now you can place a TAWK widget anywhere on a [statebus page](https://wiki.invisible.college/statebus) like this:
 ```javascript
 TAWK({name: 'username', space: '/', height: 500, width: 500, video: true, audio: true})
 ```
