@@ -163,7 +163,7 @@ guess_cursor_location = (c) ->
     else
       hover_els = [document.querySelector(path.selector)]
  
-    if hover_els.length > 0 && hover_els[0]
+    if hover_els[(path.disambig_idx or 0)]
       hovering_on = hover_els[(path.disambig_idx or 0)]
  
       rect = hovering_on.getBoundingClientRect()
