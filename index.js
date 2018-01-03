@@ -1,4 +1,5 @@
 var bus = require('statebus').serve({file_store: false})
+bus.honk = false;
 var serve = (route, file) => bus.http.get(route, (r, res) => res.sendFile(__dirname + file))
 
 serve('/janus.js', '/janus.js')
