@@ -135,6 +135,9 @@ dom.TAWK = ->
       video: true
     sb['tawk/janus_initialized'] = true
 
+  if not Janus.isWebrtcSupported() or Janus.webRTCAdapter.browserDetails.browser not in ['chrome', 'firefox']
+    return DIV {}, 'Tawk is only supported in Google Chrome or Mozilla Firefox'
+
   if @props.height && @props.height != sb['tawk/height']
     sb['tawk/height'] = @props.height
   if @props.width && @props.width != sb['tawk/width']
@@ -642,8 +645,9 @@ window.initialize_janus = ({audio = true, video = true, on_join = window.publish
   Janus.init
     dependencies: Janus.useDefaultDependencies({fetch:window.og_fetch||window.fetch})
     callback: ->
-      if not Janus.isWebrtcSupported()
-        alert "No WebRTC support in your browser. You must use Chrome, Firefox, or Edge"
+      if not Janus.isWebrtcSupported() or Janus.webRTCAdapter.browserDetails.browser not in ['chrome', 'firefox']
+        alert "Tawk is only supported in Google Chrome or Mozilla Firefox"
+        return
 
       janus = new Janus(
         server: janus_server
