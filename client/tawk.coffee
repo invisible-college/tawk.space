@@ -95,6 +95,12 @@ window.statebus_ready.push ->
       person_height: Math.round(person_height)
       person_width: Math.round(person_width)
 
+  bus('tawk/chats_served').to_fetch = (key) ->
+    val = bus.state[server + '/chats_served']
+    _: (if typeof val == 'number' then val else undefined)
+
+  bus('tawk/chats_served').to_save = unsavable
+
 ###############################################################################
 # React render functions
 ###############################################################################
@@ -167,6 +173,13 @@ dom.TAWK = ->
     me.video = video
     me.audio = audio
 
+  chats_served = sb['tawk/chats_served']
+  if chats_served
+    # Add commas, e.g. 1000 -> 1,000
+    chats_served_string = chats_served.toLocaleString();
+  else
+    chats_served_string = 'thousands of'
+
   DIV
     id: 'tawk'
     style:
@@ -180,6 +193,10 @@ dom.TAWK = ->
     if sb['tawk/drag'].dragging
       GROUP
         gid: sb['tawk/drag'].ghostGroup
+    DIV
+      style:
+        clear: 'both'
+      "Powered by tawk. Served #{chats_served_string} video chats and counting!"
 
 dom.GROUP = ->
   gid = @props.gid
