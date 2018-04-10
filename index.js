@@ -1,22 +1,37 @@
 'use strict';
 
+function get_spaces(conns) {
+  // connections state on the server is different than the client.
+  // It looks like {key: 'connections', '<random-hash>': {...}, '<another-hash>': {...}}
+  const spaces = new Set();
+  for (let connid in conns) {
+    if (connid != 'key' && conns[connid].space !== undefined) {
+      spaces.add(conns[connid].space);
+    }
+  }
+  return spaces;
+}
+
+function set_difference(a, b) {
+  return new Set([...a].filter(x => !b.has(x)));
+}
+
 function add_server_state(bus) {
-  let previous_num_conns = 0;
+  let previous_spaces = new Set();
   // If the db gets lost, restart this counter at 1000
   bus.state.chats_served = bus.state.chats_served || 1000;
 
-  // This method intentionally does not work yet -- it does not
-  // take into account that there are multiple spaces. Ideally
-  // unit tests should catch this error!
+  // TODO(karth295): This should be more efficient than
+  // computing all spaces every time. Ideally when every
+  // connection is added or removed we just update the data structures
+  // to reflect the change from that one connection.
   bus.reactive(()=> {
-    // connections state on the server is different than the client.
-    // It looks like {key: 'connections', '<random-hash>': {...}, '<another-hash>': {...}}
-    // Object.keys(...) - 1 removes the extra non-connection key called "key"
-    const num_conns = Object.keys(bus.fetch('connections')).length - 1;
-    if (num_conns == 0 && previous_num_conns > 0) {
-      bus.state.chats_served += 1;
-    }
-    previous_num_conns = num_conns;
+    const new_spaces = get_spaces(bus.fetch('connections'));
+
+    const diff = set_difference(previous_spaces, new_spaces);
+    bus.state.chats_served += diff.size;
+
+    previous_spaces = new_spaces;
   })();
 }
 
