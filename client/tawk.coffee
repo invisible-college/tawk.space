@@ -196,7 +196,12 @@ dom.TAWK = ->
     DIV
       style:
         clear: 'both'
-      "Powered by tawk. Served #{chats_served_string} video chats and counting!"
+      "Powered by "
+      A
+        href: "https://github.com/invisible-college/tawk.space"
+        target: "_blank"  # Open in new tab
+        "tawk"
+      ". Served #{chats_served_string} video chats and counting!"
 
 dom.GROUP = ->
   gid = @props.gid

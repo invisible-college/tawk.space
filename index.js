@@ -1,38 +1,51 @@
 'use strict';
 
-function get_spaces(conns) {
+function get_spaces_with_size(conns) {
   // connections state on the server is different than the client.
   // It looks like {key: 'connections', '<random-hash>': {...}, '<another-hash>': {...}}
-  const spaces = new Set();
+  const spaces = new Map();
   for (let connid in conns) {
     if (connid != 'key' && conns[connid].space !== undefined) {
-      spaces.add(conns[connid].space);
+      const space = conns[connid].space;
+      spaces.set(space, (spaces.get(space) || 0) + 1);
     }
   }
   return spaces;
 }
 
-function set_difference(a, b) {
-  return new Set([...a].filter(x => !b.has(x)));
-}
-
 function add_server_state(bus) {
-  let previous_spaces = new Set();
-  // If the db gets lost, restart this counter at 1000
-  bus.state.chats_served = bus.state.chats_served || 1000;
+  const real_spaces = new Set();
 
   // TODO(karth295): This should be more efficient than
   // computing all spaces every time. Ideally when every
   // connection is added or removed we just update the data structures
   // to reflect the change from that one connection.
-  bus.reactive(()=> {
-    const new_spaces = get_spaces(bus.fetch('connections'));
+  bus('chats_served').to_fetch = (old) => {
+    let new_chats_served = old._ || 0;
 
-    const diff = set_difference(previous_spaces, new_spaces);
-    bus.state.chats_served += diff.size;
+		const spaces_with_size = get_spaces_with_size(bus.fetch('connections'));
+    for (let [space, size] of spaces_with_size) {
+      if (size >= 2) {
+        // Consider a space a real "chat" if it has multiple people
+        real_spaces.add(space);
+      }
+    }
 
-    previous_spaces = new_spaces;
-  })();
+    // Increment counter if a space that had multiple people at some point
+    // is now empty.
+    for (let real_space of real_spaces) {
+      if (!spaces_with_size.has(real_space)) {
+        real_spaces.delete(real_space);
+        new_chats_served += 1;
+      }
+    }
+
+		return {_: new_chats_served};
+  };
+  bus('chats_served').to_save = function noop(){};
+
+  // Run the fetch function so that it reactively runs every time connections are updated
+  const ignore = bus.state.chats_served
 }
 
 function run_server(bus) {
