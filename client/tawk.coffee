@@ -11,14 +11,13 @@ janus_server = 'https://tawk.space:8089/janus'
 window.statebus_ready or= []
 window.statebus_ready.push ->
   sb['tawk/janus_initialized'] = false
-  sb['tawk/id'] = random_string(16)
   sb['tawk/space'] = null # Will be filled in dom.TAWK
 
   unsavable = (obj) ->
     throw new Error("Cannot save #{obj.key}")
 
   bus('tawk/connections').to_fetch = (key) ->
-    _: sb[server + '/connections'].all or []
+    _: bus.state[server + '/connections'].all or []
 
   bus('tawk/connections').to_save = unsavable
 
@@ -162,10 +161,9 @@ dom.TAWK = ->
   audio = if @props.audio? then @props.audio else true
 
   me.name = name  # Is allowed to change
-  if not me.id
+  if not me.active
     # These do not change (yet) if dom.TAWK is rerendered
     # with different arguments
-    me.id = sb['tawk/id']
     me.group = sb['tawk/gids'][0] or random_string(16)
     me.timeEntered = Date.now()
     me.active = true
@@ -607,7 +605,7 @@ sb['tawk/space'] (string, required) -> The room to subscribe to. Corresponds to 
     that are in a groups. The end result is that if you call the lower
     level function you get all the streams, but using dom.TAWK you only
     get a subset of them.
-sb['tawk/id'] (string, required): An identifier for the connection that must be unique
+sb[server+'/connection'].id (string, required): An identifier for the connection that must be unique
     in the given space. It is used to export stream information
     for every user.
 
@@ -679,7 +677,7 @@ window.initialize_janus = ({audio = true, video = true, on_join = window.publish
           janus.attach
             plugin: "janus.plugin.videoroom"
             error: console.error
-            onlocalstream: (stream) -> recieved_stream(stream, sb['tawk/id'])
+            onlocalstream: (stream) -> recieved_stream(stream, sb[server + '/connection'].id)
             success: (ph) ->
               # Join plugin as a publisher (able to both send and receive streams)
               plugin_handle = ph
@@ -689,7 +687,7 @@ window.initialize_janus = ({audio = true, video = true, on_join = window.publish
                   room: 1234
                   ptype: "publisher"
                   display: JSON.stringify
-                    id: sb['tawk/id']
+                    id: sb[server + '/connection'].id
                     space: sb['tawk/space']
             onmessage: (msg, jsep) ->
               # Janus is informing us of publishers we do not know about
