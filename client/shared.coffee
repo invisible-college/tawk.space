@@ -316,6 +316,7 @@ addDiffSyncToTextArea = (t, channel) ->
     console.log('CURSOR POS: ' + range[0] + ',' + range[1])
     t.setSelectionRange(range[0], range[1])
     save_me_jesus()
+    resizebox(t)
   if !ds.client
     ds.client = diffsync.create_client(ds.options)
 
