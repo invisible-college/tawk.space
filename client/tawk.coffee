@@ -11,7 +11,7 @@ janus_server = 'https://tawk.space:8089/janus'
 window.statebus_ready or= []
 window.statebus_ready.push ->
   sb['tawk/janus_initialized'] = false
-  sb['tawk/space'] = null # Will be filled in dom.TAWK
+  sb['tawk/space'] = undefined # Will be filled in dom.TAWK
 
   unsavable = (obj) ->
     throw new Error("Cannot save #{obj.key}")
@@ -229,7 +229,7 @@ dom.GROUP = ->
       sb[server + '/connection'].mouseover = gid
 
     onMouseLeave: (e) ->
-      sb[server + '/connection'].mouseover = null
+      sb[server + '/connection'].mouseover = undefined
 
     if me_in_group && sb['tawk/dimensions'].person_width < 100 # render the AV controls above the group if people are really small
       AV_CONTROL_BAR above: true
@@ -268,7 +268,7 @@ dom.GROUP.refresh = ->
       if sb['tawk/drag'].over == gid
         # If not, another over event has fired on another group
         # and we do not want to clear the group
-        sb['tawk/drag'].over = null
+        sb['tawk/drag'].over = undefined
 
 dom.PERSON = ->
   person = @props.person
@@ -376,7 +376,7 @@ dom.PERSON.refresh = ->
       refreshPositions: true
       zIndex: 1000
       start: (e, ui) ->
-        sb['tawk/drag'].over = null # set while you mouseover groups
+        sb['tawk/drag'].over = undefined # set while you mouseover groups
         sb['tawk/drag'].dragging = true
         sb['tawk/drag'].ghostGroup = random_string 16
       stop: (e, ui) ->
@@ -384,9 +384,9 @@ dom.PERSON.refresh = ->
           me.group = sb['tawk/drag'].over or sb['tawk/drag'].ghostGroup
           me.timeEntered = Date.now()
 
-        sb['tawk/drag'].over = null
+        sb['tawk/drag'].over = undefined
         sb['tawk/drag'].dragging = false
-        sb['tawk/drag'].ghostGroup = null
+        sb['tawk/drag'].ghostGroup = undefined
 
         ui.helper.css
           top: 0
@@ -519,7 +519,7 @@ random_numbers = (length) ->
 
 should_hear_fully = (person, me) ->
   me.group in [person.group, person.mouseover] or
-    (me.mouseover in [person.group, person.mouseover] and me.mouseover != null)
+    (me.mouseover in [person.group, person.mouseover] and me.mouseover != undefined)
 
 group_size = (num_people) ->
   floor = Math.floor(Math.sqrt(num_people))
