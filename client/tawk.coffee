@@ -7,6 +7,8 @@ streams = {}
 
 server       = 'state://tawk.space'
 janus_server = 'https://tawk.space:8089/janus'
+janus_admin_server = 'https://tawk.space:7889/admin'
+janus_admin_secret = 'janusoverlord'
 
 window.statebus_ready or= []
 window.statebus_ready.push ->
@@ -99,6 +101,23 @@ window.statebus_ready.push ->
     _: (if typeof val == 'number' then val else undefined)
 
   bus('tawk/chats_served').to_save = unsavable
+
+  bus('tawk/janus/sessions').to_fetch = (t) ->
+    request =
+      janus: 'list_sessions'
+      transaction: random_string(16)
+      admin_secret: janus_admin_secret
+    # No idea why this must be POST, but it does
+    console.log janus_admin_server, request
+    $.post(janus_admin_server, JSON.stringify(request))
+      .done (data) ->
+        if data['sessions']
+          t.done
+            _: data['sessions']
+        else
+          console.error data
+      .fail (error) ->
+        console.error error
 
 ###############################################################################
 # React render functions
