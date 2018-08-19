@@ -1,5 +1,6 @@
 plugin_handle = null
 streams = {}
+janus_initialized = false
 
 ###############################################################################
 # Client Bus (all state prefixed with tawk/)
@@ -12,7 +13,6 @@ janus_admin_secret = 'janusoverlord'
 
 window.statebus_ready or= []
 window.statebus_ready.push ->
-  sb['tawk/janus_initialized'] = false
   sb['tawk/space'] = undefined # Will be filled in dom.TAWK
 
   unsavable = (obj) ->
@@ -152,29 +152,16 @@ This widget can only be used from an https site, since WebRTC
 is only supported on https sites.
 ###
 dom.TAWK = ->
-  sb['tawk/space'] = if @props.space? then @props.space else ''
-  if not sb['tawk/janus_initialized']
-    initialize_janus
-      audio: true
-      video: true
-    sb['tawk/janus_initialized'] = true
-
-  if not Janus.isWebrtcSupported() or Janus.webRTCAdapter.browserDetails.browser not in ['chrome', 'firefox']
-    return DIV {}, 'Tawk is only supported in Google Chrome or Mozilla Firefox'
-
-  if @props.height && @props.height != sb['tawk/height']
-    sb['tawk/height'] = @props.height
-  if @props.width && @props.width != sb['tawk/width']
-    sb['tawk/width'] = @props.width
-  sb['tawk/scratch_disabled'] = !!@props.scratch_disabled
-
   # Have to make sure we get all connections to choose
-  # whether to join the first group
+  # whether to join the first group. This state is not
+  # used directly, but is necessary to ensure we don't
+  # use it elsewhere in the widget until it is loaded.
   connections = sb[server + '/connections']
   me = sb[server + '/connection']
   if @loading()
     return DIV {}, 'Loading...'
 
+  sb['tawk/space'] = if @props.space? then @props.space else ''
   name = @props.name or random_name?() or 'Anonymous ' + random_numbers(4)
   video = if @props.video? then @props.video else true
   audio = if @props.audio? then @props.audio else true
@@ -189,6 +176,23 @@ dom.TAWK = ->
     me.space = sb['tawk/space']
     me.video = video
     me.audio = audio
+
+  if not janus_initialized
+    initialize_janus
+      my_id: me.id
+      my_space: sb['tawk/space']
+      audio: true
+      video: true
+    janus_initialized = true
+
+  if not Janus.isWebrtcSupported() or Janus.webRTCAdapter.browserDetails.browser not in ['chrome', 'firefox']
+    return DIV {}, 'Tawk is only supported in Google Chrome or Mozilla Firefox'
+
+  if @props.height && @props.height != sb['tawk/height']
+    sb['tawk/height'] = @props.height
+  if @props.width && @props.width != sb['tawk/width']
+    sb['tawk/width'] = @props.width
+  sb['tawk/scratch_disabled'] = !!@props.scratch_disabled
 
   chats_served = sb['tawk/chats_served']
   if chats_served
@@ -588,6 +592,7 @@ recieved_stream = (stream, person_id) ->
 # Note that the hook when we get a local stream is actually
 # a separate callback to janus.attach
 window.publish_local_stream = ({audio, video}) ->
+  console.info 'publishing local stream'
   plugin_handle.createOffer
     media:
       audioRecv: false
@@ -595,6 +600,7 @@ window.publish_local_stream = ({audio, video}) ->
       audioSend: audio
       videoSend: video
     success: (jsep) ->
+      console.info 'success, configuring local stream'
       plugin_handle.send
         message:
           request: "configure"
@@ -615,18 +621,7 @@ Connect to tawk's video server (Janus). Automatically subscribe
 to all remote streams in the same space,
 and by default automatically publish local stream (though this is configurable).
 
-State imported:
-sb['tawk/space'] (string, required) -> The room to subscribe to. Corresponds to <space-id>
-    in https://tawk.space/<space-id>. Note that you probably
-    don't want to have overlap between spaces used in dom.TAWK
-    and directly in initialize_janus. This function subscribes
-    to all streams in the space, but dom.TAWK only renders streams
-    that are in a groups. The end result is that if you call the lower
-    level function you get all the streams, but using dom.TAWK you only
-    get a subset of them.
-sb[server+'/connection'].id (string, required): An identifier for the connection that must be unique
-    in the given space. It is used to export stream information
-    for every user.
+State imported: none
 
 State exported:
 sb['tawk/stream/' + id] -> {
@@ -637,6 +632,17 @@ sb['tawk/stream/' + id] -> {
 There will be one piece of state exported per remote *and* local stream.
 
 Params:
+my_id (string, required): An identifier for the connection that must be unique
+    in the given space. It is used to export stream information
+    for every user.
+my_space (string, required): The room to subscribe to. Corresponds to <space-id>
+    in https://tawk.space/<space-id>. Note that you probably
+    don't want to have overlap between spaces used in dom.TAWK
+    and directly in initialize_janus. This function subscribes
+    to all streams in the space, but dom.TAWK only renders streams
+    that are in a groups. The end result is that if you call the lower
+    level function you get all the streams, but using dom.TAWK you only
+    get a subset of them.
 audio (boolean, default=true): Whether to subscribe to and publish audio
 video (boolean, default=true): Whether to subscribe to and publish video
 on_join (function({audio, video}), default=window.publish_local_stream):
@@ -648,8 +654,9 @@ on_join (function({audio, video}), default=window.publish_local_stream):
     into initialize_janus, and represent whether the caller wants to publish
     audio and video.
 ###
-window.initialize_janus = ({audio = true, video = true, on_join = window.publish_local_stream}) ->
+window.initialize_janus = ({my_id, my_space, audio = true, video = true, on_join = window.publish_local_stream}) ->
   new_remote_feed = (janus, feed) ->
+    console.info 'new remote feed', feed.display
     remote_feed = null
     {id, space} = JSON.parse feed.display
     janus.attach
@@ -696,8 +703,9 @@ window.initialize_janus = ({audio = true, video = true, on_join = window.publish
           janus.attach
             plugin: "janus.plugin.videoroom"
             error: console.error
-            onlocalstream: (stream) -> recieved_stream(stream, sb[server + '/connection'].id)
+            onlocalstream: (stream) -> recieved_stream(stream, my_id)
             success: (ph) ->
+              console.info 'joining as a publisher', my_id, my_space
               # Join plugin as a publisher (able to both send and receive streams)
               plugin_handle = ph
               plugin_handle.send
@@ -706,14 +714,14 @@ window.initialize_janus = ({audio = true, video = true, on_join = window.publish
                   room: 1234
                   ptype: "publisher"
                   display: JSON.stringify
-                    id: sb[server + '/connection'].id
-                    space: sb['tawk/space']
+                    id: my_id
+                    space: my_space
             onmessage: (msg, jsep) ->
               # Janus is informing us of publishers we do not know about
               publishers = msg["publishers"] or []
               for feed in publishers
                 {id, space} = JSON.parse feed.display
-                if space == sb['tawk/space']
+                if space == my_space
                   new_remote_feed janus, feed
 
               # The plugin_handle.send call to join as a publisher succeeded.
