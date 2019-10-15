@@ -48,7 +48,7 @@ Clone and set up the Janus WebRTC Gateway. You only need the video room plugin. 
 Download required packages:
 ```bash
 sudo dnf -y install libmicrohttpd-devel jansson-devel libnice-devel \
-   openssl-devel libsrtp-devel sofia-sip-devel glib-devel \
+   openssl-devel libsrtp-devel sofia-sip-devel glib-devel libconfig-devel \
    opus-devel libogg-devel pkgconfig gengetopt libtool autoconf automake
 
 git clone https://github.com/sctplab/usrsctp
