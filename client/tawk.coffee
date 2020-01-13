@@ -339,6 +339,7 @@ dom.PERSON = ->
               width: '100%'
               zIndex: -1
               opacity: .9999 # http://stackoverflow.com/questions/5736503
+              borderRadius: 1 # TODO: why is this necessary? https://github.com/invisible-college/tawk.space/issues/40
       else
         DIV
           style:
