@@ -60,10 +60,10 @@ cd ..
 
 Download and compile Janus
 ```bash
-git clone git@github.com:meetecho/janus-gateway.git
+git clone https://github.com/meetecho/janus-gateway.git
 cd janus-gateway
 sh autogen.sh
-./configure --prefix=/opt/janus --disable-websockets --disable-rabbitmq
+./configure --prefix=/opt/janus --disable-websockets --disable-rabbitmq --disable-aes-gcm
 make
 sudo make install
 sudo make configs
