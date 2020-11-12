@@ -5,7 +5,7 @@ agora_initialized = false
 # Client Bus (all state prefixed with tawk/)
 ###############################################################################
 
-server       = 'statei://localhost'
+server       = 'state://tawk.space'
 
 window.statebus_ready or= []
 window.statebus_ready.push ->
