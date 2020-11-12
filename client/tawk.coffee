@@ -550,7 +550,6 @@ window.received_track = (person_id, track, media_type) ->
   streams[person_id].addTrack(track)
 
   if media_type == "audio"
-    console.log("Harking for ", person_id, track, media_type)
     sb['tawk/stream/' + person_id] =
       volume: 0
 
@@ -620,6 +619,7 @@ window.initialize_agora = ({my_id, my_space}) ->
     if space != my_space
       return
 
+    console.log("Received track for", id, user)
     if media_type == "video"
       window.received_track(id, user.videoTrack._mediaStreamTrack, "video")
     else if media_type == "audio"
@@ -630,4 +630,5 @@ window.initialize_agora = ({my_id, my_space}) ->
   client.on "user-unpublished", (user) ->
     {id, space} = JSON.parse(user.uid.toString())
     if space == my_space
+      console.log("Removing", id, user)
       delete streams[id]

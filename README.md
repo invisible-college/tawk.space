@@ -14,18 +14,17 @@ Tawk is meant to be simple and flexible to use.
 * Each space can have **multiple chat groups**. Drag your video to create one or mouseover another group to hear what they're saying. This is an excellent way to create "breakout" groups.
 
 ## Obligatory thanks
-Tawk is mainly powered by two libraries:
+Tawk is mainly powered by two projects:
 
 * Statebus: https://github.com/invisible-college/statebus
-* Janus WebRTC Gateway: https://github.com/meetecho/janus-gateway
+* Agora.io: https://agora.io
 
 ## Embed in your website
 
 Insert this code into your html somewhere:
 
 ```html
-<script src="https://tawk.space/janus.js"></script>
-<script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/webrtc-adapter/5.0.4/adapter.min.js" ></script>
+<script src="https://download.agora.io/sdk/web/AgoraRTC_N-4.1.0.js"></script>
 <script src='https://tawk.space/hark.js'></script>
 <script src="https://invisible-college.github.io/diffsync/diffsync.js"></script>
 <script src="https://tawk.space/client/shared.coffee"></script>
@@ -39,51 +38,13 @@ And if you aren't using statebus already, include this too:
 
 Now you can place a TAWK widget anywhere on a [statebus page](https://wiki.invisible.college/statebus) like this:
 ```javascript
-TAWK({name: 'username', space: '/', height: 500, width: 500, video: true, audio: true})
+TAWK({name: 'username', space: '/', height: 500, width: 500})
 ```
 
 ## Set up your own tawk instance
-Clone and set up the Janus WebRTC Gateway. You only need the video room plugin. Follow their documentation for detailed instructions and options. Here is what I did on Fedora:
 
-Download required packages:
-```bash
-sudo dnf -y install libmicrohttpd-devel jansson-devel libnice-devel \
-   openssl-devel libsrtp-devel sofia-sip-devel glib-devel libconfig-devel \
-   opus-devel libogg-devel pkgconfig gengetopt libtool autoconf automake
+Clone tawk.space and install dependencies:
 
-git clone https://github.com/sctplab/usrsctp
-cd usrsctp
-./bootstrap
-./configure --prefix=/usr && make && sudo make install
-cd ..
-```
-
-Download and compile Janus
-```bash
-git clone git@github.com:meetecho/janus-gateway.git
-cd janus-gateway
-sh autogen.sh
-./configure --prefix=/opt/janus --disable-websockets --disable-rabbitmq
-make
-sudo make install
-sudo make configs
-```
-
-Configure Janus for https -- edit `/opt/janus/etc/janus/janus.transport.http.cfg`:
-* Under [general] set `http` to `no`
-* Set `https` to yes
-* Change the `secure_port` to `8089`
-* Under [certificates] set your public and private keys
-
-Configure Janus videoroom plugin -- edit `/opt/janus/etc/janus/janus.plugin.videoroom.cfg`
-* Set `max_publishers` to some large number--this controls how many people can be in tawk at once
-
-Run the Janus gateway (you might want to do this in `screen`):
-```bash
-sudo /opt/janus/bin/janus --interface=0.0.0.0 --cert-pem=/path/to/public.certificate --cert-key=/path/to/private.key --stun-server=stun.l.google.com:19302
-```
-
-In the same directory that you cloned janus-gateway, clone tawk.space and install dependencies
 ```bash
 git@github.com:invisible-college/tawk.space.git
 cd tawk.space
@@ -91,6 +52,11 @@ npm install
 ```
 
 You must set up certs for https in a folder called `certs/` in the tawk.space repo. This will be used by both tawk.space and statebus. Put the public key in `certs/certificate` and private key in `certs/private-key`.
+
+```
+sudo ln -s /etc/letsencrypt/live/<your-domain>/fullchain.pem certs/certificate
+sudo ln -s /etc/letsencrypt/live/<your-domain>/privkey.pem certs/private-key
+```
 
 Note: If you want the tawk.space logo, download it at https://tawk.space/favicon.ico and put it in the tawk.space folder as `favicon.ico`. This avoids having to put images in the repository.
 
