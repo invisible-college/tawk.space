@@ -26,8 +26,6 @@ dom.BODY = ->
       space: get_space()
       height: sb['window'].height - 20 # for topbar
       width: sb['window'].width
-      video: true
-      audio: true
 
 dom.TOPBAR = ->
   localUser = sb[ 'ls/localUser']
@@ -87,8 +85,8 @@ get_space = ->
     .dark-gray { background-color: #BFBFBF }
   </style>
 </head>
+<script src="https://download.agora.io/sdk/web/AgoraRTC_N-4.1.0.js"></script>
 <script src="https://stateb.us/client6.js" server="/" globals="false"></script>
-<script src="/janus.js" ></script>
 <script src="https://invisible-college.github.io/universal-sync/diffsync.js"></script>
 <script src="/client/shared.coffee"></script>
 <script src="/client/earl.coffee"></script>

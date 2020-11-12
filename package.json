@@ -4,7 +4,7 @@
   "description": "Scaled video chats of the future!",
   "dependencies": {
     "hark": "^1.1.3",
-    "statebus": "^6.0.85"
+    "statebus": "^6.0.134"
   },
   "scripts": {
     "run": "node index",

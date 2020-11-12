@@ -1,15 +1,11 @@
-plugin_handle = null
 streams = {}
-janus_initialized = false
+agora_initialized = false
 
 ###############################################################################
 # Client Bus (all state prefixed with tawk/)
 ###############################################################################
 
-server       = 'state://tawk.space'
-janus_server = 'https://tawk.space:8089/janus'
-janus_admin_server = 'https://tawk.space:7889/admin'
-janus_admin_secret = 'janusoverlord'
+server       = 'statei://localhost'
 
 window.statebus_ready or= []
 window.statebus_ready.push ->
@@ -102,23 +98,6 @@ window.statebus_ready.push ->
 
   bus('tawk/chats_served').to_save = unsavable
 
-  bus('tawk/janus/sessions').to_fetch = (t) ->
-    request =
-      janus: 'list_sessions'
-      transaction: random_string(16)
-      admin_secret: janus_admin_secret
-    # No idea why this must be POST, but it does
-    console.log janus_admin_server, request
-    $.post(janus_admin_server, JSON.stringify(request))
-      .done (data) ->
-        if data['sessions']
-          t.done
-            _: data['sessions']
-        else
-          console.error data
-      .fail (error) ->
-        console.error error
-
 ###############################################################################
 # React render functions
 ###############################################################################
@@ -163,8 +142,6 @@ dom.TAWK = ->
 
   sb['tawk/space'] = if @props.space? then @props.space else ''
   name = @props.name or random_name?() or 'Anonymous ' + random_numbers(4)
-  video = if @props.video? then @props.video else true
-  audio = if @props.audio? then @props.audio else true
 
   me.name = name  # Is allowed to change
   if not me.active
@@ -174,19 +151,14 @@ dom.TAWK = ->
     me.timeEntered = Date.now()
     me.active = true
     me.space = sb['tawk/space']
-    me.video = video
-    me.audio = audio
+    me.video = true
+    me.audio = true
 
-  if not janus_initialized
-    initialize_janus
+  if not agora_initialized
+    initialize_agora
       my_id: me.id
       my_space: sb['tawk/space']
-      audio: true
-      video: true
-    janus_initialized = true
-
-  if not Janus.isWebrtcSupported() or Janus.webRTCAdapter.browserDetails.browser not in ['chrome', 'firefox']
-    return DIV {}, 'Tawk is only supported in Google Chrome or Mozilla Firefox'
+    agora_initialized = true
 
   if @props.height && @props.height != sb['tawk/height']
     sb['tawk/height'] = @props.height
@@ -571,56 +543,30 @@ abs_position_in_group = (index, divSize, dimensions) ->
 # Send and receive video streams
 ###############################################################################
 
-# This section is a little complicated because Janus requires multiple
-# roundtrips for nearly everything. Suggestions on improvement are welcome.
-
-recieved_stream = (stream, person_id) ->
+window.received_track = (person_id, track, media_type) ->
   # Put stream (url) in state so the audio/video can be rendered
-  streams[person_id] = stream
-  sb['tawk/stream/' + person_id] =
-    volume: 0
+  if person_id not of streams
+    streams[person_id] = new MediaStream()
+  streams[person_id].addTrack(track)
 
-  # Save volume we receive for each stream to render as a green bar
-  speech = hark(stream, {interval: 200, play: false})
-  speech.on 'volume_change', (decibals, threshold) ->
-    if decibals < threshold
-      # Probably not human speech
-      decibals = 0
-    # Transform to 0-100% scale
-    sb['tawk/stream/' + person_id].volume = -2 * decibals
+  if media_type == "audio"
+    console.log("Harking for ", person_id, track, media_type)
+    sb['tawk/stream/' + person_id] =
+      volume: 0
 
-# Tell Janus to publish our video stream to the server
-# Note that the hook when we get a local stream is actually
-# a separate callback to janus.attach
-window.publish_local_stream = ({audio, video}) ->
-  console.info 'publishing local stream'
-  plugin_handle.createOffer
-    media:
-      audioRecv: false
-      videoRecv: false
-      audioSend: audio
-      videoSend: video
-    success: (jsep) ->
-      console.info 'success, configuring local stream'
-      plugin_handle.send
-        message:
-          request: "configure"
-          audio: audio
-          video: video
-        jsep: jsep
-    error: (error) ->
-      if audio
-        console.error 'no_camera', 'No camera allowed', 'Trying audio-only mode', error
-        publish_local_stream
-          audio: false
-          video: video
-      else
-        console.error 'no_camera', 'No camera or microphone allowed', 'You are a listener', error
+    # Save volume we receive for each stream to render as a green bar
+    speech = hark(new MediaStream([track]), {interval: 200, play: false})
+    speech.on 'volume_change', (decibals, threshold) ->
+      if decibals < threshold
+        # Probably not human speech
+        decibals = 0
+      # Transform to 0-100% scale
+      sb['tawk/stream/' + person_id].volume = -2 * decibals
 
 ###
-Connect to tawk's video server (Janus). Automatically subscribe
-to all remote streams in the same space,
-and by default automatically publish local stream (though this is configurable).
+Publish local audio/video feed and automatically subscribe to all remote streams
+in the same space. If camera and/or microphone are not available, it publishes
+what's available.
 
 State imported: none
 
@@ -639,100 +585,49 @@ my_id (string, required): An identifier for the connection that must be unique
 my_space (string, required): The room to subscribe to. Corresponds to <space-id>
     in https://tawk.space/<space-id>. Note that you probably
     don't want to have overlap between spaces used in dom.TAWK
-    and directly in initialize_janus. This function subscribes
+    and directly in initialize_agora. This function subscribes
     to all streams in the space, but dom.TAWK only renders streams
     that are in a groups. The end result is that if you call the lower
     level function you get all the streams, but using dom.TAWK you only
     get a subset of them.
-audio (boolean, default=true): Whether to subscribe to and publish audio
-video (boolean, default=true): Whether to subscribe to and publish video
-on_join (function({audio, video}), default=window.publish_local_stream):
-    A callback for when we have connected to Janus and its videoroom plugin.
-    The default callback is to immediately publish your local stream and ask
-    the user for permission to their camera and/or microphone. You can
-    override this callback if you do not wish to immediately publish the local stream.
-    The callback takes {audio, video}, which are the same values passed
-    into initialize_janus, and represent whether the caller wants to publish
-    audio and video.
 ###
-window.initialize_janus = ({my_id, my_space, audio = true, video = true, on_join = window.publish_local_stream}) ->
-  new_remote_feed = (janus, feed) ->
-    console.info 'new remote feed', feed.display
-    remote_feed = null
-    {id, space} = JSON.parse feed.display
-    janus.attach
-      plugin: "janus.plugin.videoroom"
-      onremotestream: (stream) -> recieved_stream(stream, id)
-      error: console.error
-      success: (ph) ->
-        remote_feed = ph
-        remote_feed.send
-          message:
-            request: "join"
-            room: 1234
-            ptype: "listener"
-            feed: feed.id
-      onmessage: (msg, jsep) ->
-        if jsep
-          remote_feed.createAnswer
-            jsep: jsep
-            error: console.error
-            media:
-              audioRecv: audio
-              videoRecv: video
-              audioSend: false
-              videoSend: false
-            success: (jsep) ->
-              remote_feed.send
-                jsep: jsep
-                message:
-                  request: "start"
-                  room: 1234
+window.initialize_agora = ({my_id, my_space}) ->
+  # We're choosing vp8 here, but we might want to be smarter about how we pick
+  # a codec.
+  #   * Ancient Apple devices only support h.264, but new ones support vp8
+  #   * MacOS doesn't support vp9
+  #   * In the future, all devices will support AV1, but we're far off from that
+  # https://agoraio-community.github.io/AgoraWebSDK-NG/docs/en/basic_call
+  client = AgoraRTC.createClient({ mode: "rtc", codec: "vp8" })
 
-  Janus.init
-    dependencies: Janus.useDefaultDependencies({fetch:window.og_fetch||window.fetch})
-    callback: ->
-      if not Janus.isWebrtcSupported() or Janus.webRTCAdapter.browserDetails.browser not in ['chrome', 'firefox']
-        alert "Tawk is only supported in Google Chrome or Mozilla Firefox"
-        return
+  # Hardcoding the APP_ID like this is very insecure. We should consider adding
+  # server-side logic to integrate with Agora's access token security model.
+  # We also shouldn't publish this on github, and should instead pass this as
+  # a command line parameter to the server, which should relay it to the client.
+  encoded_data = JSON.stringify({id: my_id, space: my_space})
+  uid = await client.join("0faba8c1997640d6b7b9f9fd43dc1bc4", "channel", null, encoded_data)
 
-      janus = new Janus(
-        server: janus_server
-        error: console.error
-        success: ->
-          # Connect to the videoroom plugin
-          janus.attach
-            plugin: "janus.plugin.videoroom"
-            error: console.error
-            onlocalstream: (stream) -> recieved_stream(stream, my_id)
-            success: (ph) ->
-              console.info 'joining as a publisher', my_id, my_space
-              # Join plugin as a publisher (able to both send and receive streams)
-              plugin_handle = ph
-              plugin_handle.send
-                message:
-                  request: "join"
-                  room: 1234
-                  ptype: "publisher"
-                  display: JSON.stringify
-                    id: my_id
-                    space: my_space
-            onmessage: (msg, jsep) ->
-              # Janus is informing us of publishers we do not know about
-              publishers = msg["publishers"] or []
-              for feed in publishers
-                {id, space} = JSON.parse feed.display
-                if space == my_space
-                  new_remote_feed janus, feed
+  microphone = await AgoraRTC.createMicrophoneAudioTrack()
+  video = await AgoraRTC.createCameraVideoTrack()
+  my_stream = new MediaStream([video.getMediaStreamTrack(), microphone.getMediaStreamTrack()])
+  window.received_track(my_id, video.getMediaStreamTrack(), "video")
+  window.received_track(my_id, microphone.getMediaStreamTrack(), "audio")
 
-              # The plugin_handle.send call to join as a publisher succeeded.
-              # We can now send our video to everybody
-              if msg["videoroom"] == "joined"
-                on_join
-                  audio: audio
-                  video: video
+  await client.publish([video, microphone])
+  client.on "user-published", (user, media_type) ->
+    await client.subscribe(user, media_type)
+    {id, space} = JSON.parse(user.uid.toString())
+    if space != my_space
+      return
 
-              if jsep
-                plugin_handle.handleRemoteJsep
-                  jsep: jsep
-      )
+    if media_type == "video"
+      window.received_track(id, user.videoTrack._mediaStreamTrack, "video")
+    else if media_type == "audio"
+      window.received_track(id, user.audioTrack._mediaStreamTrack, "audio")
+    else
+      console.error("Unexpected media_type!", media_type, user)
+
+  client.on "user-unpublished", (user) ->
+    {id, space} = JSON.parse(user.uid.toString())
+    if space == my_space
+      delete streams[id]
