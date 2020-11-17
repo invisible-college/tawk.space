@@ -549,6 +549,10 @@ window.received_track = (person_id, track, media_type) ->
     streams[person_id] = new MediaStream()
   streams[person_id].addTrack(track)
 
+  # This forces the UI to re-render.
+  sb['tawk/stream/' + person_id] =
+    "#{media_type}": true
+
   if media_type == "audio"
     sb['tawk/stream/' + person_id] =
       volume: 0
@@ -606,13 +610,7 @@ window.initialize_agora = ({my_id, my_space}) ->
   encoded_data = JSON.stringify({id: my_id, space: my_space})
   uid = await client.join("0faba8c1997640d6b7b9f9fd43dc1bc4", "channel", null, encoded_data)
 
-  microphone = await AgoraRTC.createMicrophoneAudioTrack()
-  video = await AgoraRTC.createCameraVideoTrack()
-  my_stream = new MediaStream([video.getMediaStreamTrack(), microphone.getMediaStreamTrack()])
-  window.received_track(my_id, video.getMediaStreamTrack(), "video")
-  window.received_track(my_id, microphone.getMediaStreamTrack(), "audio")
-
-  await client.publish([video, microphone])
+  # Set up these callbacks as soon as possible to avoid losing any events
   client.on "user-published", (user, media_type) ->
     await client.subscribe(user, media_type)
     {id, space} = JSON.parse(user.uid.toString())
@@ -632,3 +630,12 @@ window.initialize_agora = ({my_id, my_space}) ->
     if space == my_space
       console.log("Removing", id, user)
       delete streams[id]
+      bus.delete('tawk/stream/' + id)
+
+  microphone = await AgoraRTC.createMicrophoneAudioTrack()
+  video = await AgoraRTC.createCameraVideoTrack()
+  my_stream = new MediaStream([video.getMediaStreamTrack(), microphone.getMediaStreamTrack()])
+  window.received_track(my_id, video.getMediaStreamTrack(), "video")
+  window.received_track(my_id, microphone.getMediaStreamTrack(), "audio")
+
+  await client.publish([video, microphone])
