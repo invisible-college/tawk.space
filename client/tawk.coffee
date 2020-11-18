@@ -1,6 +1,9 @@
 streams = {}
 agora_initialized = false
 
+window.camera = undefined
+window.microphone = undefined
+
 ###############################################################################
 # Client Bus (all state prefixed with tawk/)
 ###############################################################################
@@ -131,6 +134,18 @@ This widget can only be used from an https site, since WebRTC
 is only supported on https sites.
 ###
 dom.TAWK = ->
+  if not av_initialized
+    initialize_av()
+    av_initialized = true
+
+  # initialize_av asynchronously sets this state once it has figured out whether
+  # the camera and microphone are accessible. For now, only mandate that the
+  # user has a microphone
+  if sb['tawk/av_check'].microphone == undefined
+    return DIV {}, 'Loading microphone...'
+  else if not sb['tawk/av_check'].microphone
+    return DIV {}, 'No microphone was accessible. Please plug one in and grant permission for use.'
+
   # Have to make sure we get all connections to choose
   # whether to join the first group. This state is not
   # used directly, but is necessary to ensure we don't
@@ -151,8 +166,8 @@ dom.TAWK = ->
     me.timeEntered = Date.now()
     me.active = true
     me.space = sb['tawk/space']
-    me.video = true
-    me.audio = true
+    me.video = !!window.camera
+    me.audio = !!window.microphone
     me.avatar_url = next_avatar_url()
 
   if not agora_initialized
@@ -393,14 +408,16 @@ dom.AV_CONTROL_BAR = ->
     AV_BUTTON
       danger: !me.video
       onClick: (e) ->
-        if me.video
-          plugin_handle?.muteVideo()
+        if window.camera == undefined
+          # TODO: warn the user when they don't have an accessible camera but
+          # try to turn on video. This silently keeps it off.
           me.video = false
         else
-          plugin_handle?.unmuteVideo()
-          me.video = true
-        return
-
+          # TODO: call window.camera.close() to turn off camera entirely. Right
+          # now when you turn off video, your camera light is on, even though we
+          # aren't using that camera feed.
+          me.video = !!!me.video
+          window.camera.setEnabled(me.video)
       VIDEO_ICON
         on: !!me.video
         width: 16
@@ -408,13 +425,16 @@ dom.AV_CONTROL_BAR = ->
     AV_BUTTON
       danger: !me.audio
       onClick: (e) ->
-        if me.audio
-          plugin_handle?.muteAudio()
+        if window.microphone == undefined
+          # TODO: warn the user when they don't have an accessible mic but
+          # try to turn on audio. This silently keeps it off.
           me.audio = false
         else
-          plugin_handle?.unmuteAudio()
-          me.audio = true
-        return
+          # TODO: call window.camera.close() to turn off camera entirely. Right
+          # now when you turn off video, your camera light is on, even though we
+          # aren't using that camera feed.
+          me.audio = !!!me.audio
+          window.microphone.setEnabled(me.audio)
 
       MIC_ICON
         on: !!me.audio
@@ -614,7 +634,8 @@ window.received_track = (person_id, track, media_type) ->
 ###
 Publish local audio/video feed and automatically subscribe to all remote streams
 in the same space. If camera and/or microphone are not available, it publishes
-what's available.
+what's available. Note that window.initialize_av must be called before this
+method.
 
 State imported: none
 
@@ -677,10 +698,20 @@ window.initialize_agora = ({my_id, my_space}) ->
       delete streams[id]
       bus.delete('tawk/stream/' + id)
 
-  microphone = await AgoraRTC.createMicrophoneAudioTrack()
-  video = await AgoraRTC.createCameraVideoTrack()
-  my_stream = new MediaStream([video.getMediaStreamTrack(), microphone.getMediaStreamTrack()])
-  window.received_track(my_id, video.getMediaStreamTrack(), "video")
-  window.received_track(my_id, microphone.getMediaStreamTrack(), "audio")
+  window.received_track(my_id, window.camera.getMediaStreamTrack(), "video")
+  window.received_track(my_id, window.microphone.getMediaStreamTrack(), "audio")
 
-  await client.publish([video, microphone])
+  await client.publish([window.camera, window.microphone])
+
+window.initialize_av = ->
+  try
+    # Save as global variables so we can enable/disable as necessary
+    [window.microphone, window.camera] = await AgoraRTC.createMicrophoneAndCameraTracks()
+    sb['tawk/av_check'] =
+      camera: true
+      microphone: true
+  catch e
+    console.error(e)
+    sb['tawk/av_check'] =
+      camera: false
+      microphone: false
