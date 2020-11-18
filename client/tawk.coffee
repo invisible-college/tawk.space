@@ -153,6 +153,7 @@ dom.TAWK = ->
     me.space = sb['tawk/space']
     me.video = true
     me.audio = true
+    me.avatar_url = next_avatar_url()
 
   if not agora_initialized
     initialize_agora
@@ -313,24 +314,9 @@ dom.PERSON = ->
               opacity: .9999 # http://stackoverflow.com/questions/5736503
               borderRadius: 1 # TODO: why is this necessary? https://github.com/invisible-college/tawk.space/issues/40
       else
-        DIV
-          style:
-            backgroundColor: 'black'
-            height: '100%'
-            width: '100%'
-            textAlign: 'center'
-            fontSize: (height / 180) + 'em'
-            textColor: 'white'
-
-          DIV {},
-            DIV
-              person.name
-            BR {},
-            DIV
-              if person.audio
-                '(Audio-Only)'
-              else
-                '(Muted)'
+        NO_VIDEO_AVATAR
+          person: person
+          height: height
       if person.audio
         DIV
           style:
@@ -469,6 +455,44 @@ dom.AV_BUTTON = ->
       borderRadius: 4
     @props.children
 
+dom.NO_VIDEO_AVATAR = ->
+  person = @props.person
+  height = @props.height
+  me = sb[server + '/connection']
+  DIV
+    style:
+      height: '100%'
+      width: '100%'
+      textAlign: 'center'
+      fontSize: (height / 180) + 'em'
+      textColor: 'white'
+    DIV
+      style:
+        height: '20%'
+      DIV
+        person.name
+      BR {},
+      DIV
+        if person.audio
+          '(Audio-Only)'
+        else
+          '(Muted)'
+    DIV
+      style:
+        backgroundImage: "url('#{person.avatar_url}')"
+        backgroundSize: 'contain'
+        backgroundPosition: 'center bottom'
+        backgroundRepeat: 'no-repeat'
+        height: '80%'
+      if person.id == me.id
+        onClick: ->
+          me.avatar_url = next_avatar_url(me.avatar_url)
+          sb[server + '/connection'] = me
+
+dom.AVATAR_PICKER = ->
+  me = sb[server + '/connection']
+  DIV({})
+
 
 VIDEO_ICON = (props) ->
   SVG
@@ -512,6 +536,27 @@ random_numbers = (length) ->
   Math.round((Math.pow(10, length + 1) - Math.random() * Math.pow(10, length)))
     .toString(10)
     .slice(1)
+
+
+# TODO: if this feature is popular, copy these images into tawk rather than
+# serving from Wikimedia directly.
+avatar_urls = [
+  'https://upload.wikimedia.org/wikipedia/commons/thumb/e/e9/Black_Man_Working_at_his_Laptop_on_the_Couch_Cartoon_Vector.svg/2880px-Black_Man_Working_at_his_Laptop_on_the_Couch_Cartoon_Vector.svg.png',
+  'https://upload.wikimedia.org/wikipedia/commons/thumb/2/21/Corporate_Woman_Working_at_her_Desk.svg/2880px-Corporate_Woman_Working_at_her_Desk.svg.png',
+  'https://upload.wikimedia.org/wikipedia/commons/thumb/a/aa/A_Humble_Cartoon_Businessman.svg/1920px-A_Humble_Cartoon_Businessman.svg.png',
+  'https://upload.wikimedia.org/wikipedia/commons/thumb/6/6d/A_Confident_Cartoon_Businesswoman.svg/1920px-A_Confident_Cartoon_Businesswoman.svg.png',
+  'https://upload.wikimedia.org/wikipedia/commons/thumb/4/48/Cute_Santa_Claus_Character_Giving_The_Thumbs_Up.svg/1920px-Cute_Santa_Claus_Character_Giving_The_Thumbs_Up.svg.png',
+  'https://upload.wikimedia.org/wikipedia/commons/thumb/f/f9/Batman_Clipart.svg/660px-Batman_Clipart.svg.png',
+]
+next_avatar_url = (current_url) ->
+  current_index = avatar_urls.indexOf(current_url)
+  if current_index == -1
+    index = Math.floor(Math.random() * avatar_urls.length)
+  else:
+    # Cycle through avatar urls in order
+    index = (current_index + 1) % avatar_urls.length
+
+  return avatar_urls[index]
 
 should_hear_fully = (person, me) ->
   me.group in [person.group, person.mouseover] or
