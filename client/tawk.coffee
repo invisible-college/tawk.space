@@ -257,7 +257,7 @@ dom.GROUP = ->
     if members.length
       SYNCAREA
         key_: server + '/group/' + gid
-        placeholder: 'This is your group scratch space'
+        placeholder: 'This is your group\'s shared text box. You can share links in here.'
         style:
           width: '100%'
           color: '#282c34'
