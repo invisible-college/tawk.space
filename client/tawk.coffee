@@ -182,7 +182,7 @@ dom.TAWK = ->
     sb['tawk/width'] = @props.width
 
   chats_served = sb['tawk/chats_served']
-  if chats_served
+  if chats_served and typeof chats_served == 'number'
     # Add commas, e.g. 1000 -> 1,000
     chats_served_string = chats_served.toLocaleString();
   else
