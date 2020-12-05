@@ -205,11 +205,11 @@ dom.TAWK = ->
     DIV
       style:
         clear: 'both'
-      "Powered by "
+      "Made with ❤️ on "
       A
         href: "https://github.com/invisible-college/tawk.space"
         target: "_blank"  # Open in new tab
-        "tawk"
+        "Github"
       ". Served #{chats_served_string} video chats and counting!"
 
 dom.GROUP = ->
