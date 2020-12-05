@@ -485,7 +485,7 @@ dom.NO_VIDEO_AVATAR = ->
       width: '100%'
       textAlign: 'center'
       fontSize: (height / 180) + 'em'
-      textColor: 'white'
+      color: '#282c34'
     DIV
       style:
         height: '20%'
