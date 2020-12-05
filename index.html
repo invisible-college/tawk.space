@@ -50,6 +50,9 @@ dom.TOPBAR = ->
             fontWeight: 'bold'
           INPUT
             value: localUser.name
+            className: 'light-gray'
+            style:
+              color: '#282c34'
             onChange: (e) ->
               localUser.name = e.target.value
 
@@ -79,7 +82,10 @@ get_space = ->
   <script src='/hark.js'></script>
 
   <style>
-    html, body { background-color: #F7F7F7 }
+    html, body {
+      color: #abb2bf;
+      background-color: #282c34;
+    }
     .light-gray { background-color: #D9D9D9 }
     .dark-gray { background-color: #BFBFBF }
   </style>

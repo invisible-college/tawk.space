@@ -180,7 +180,6 @@ dom.TAWK = ->
     sb['tawk/height'] = @props.height
   if @props.width && @props.width != sb['tawk/width']
     sb['tawk/width'] = @props.width
-  sb['tawk/scratch_disabled'] = !!@props.scratch_disabled
 
   chats_served = sb['tawk/chats_served']
   if chats_served
@@ -255,12 +254,13 @@ dom.GROUP = ->
             person: user
             position: abs_position_in_group(index, divSize, sb['tawk/dimensions'])
 
-    if members.length && !sb['tawk/scratch_disabled']
+    if members.length
       SYNCAREA
         key_: server + '/group/' + gid
         placeholder: 'This is your group scratch space'
         style:
           width: '100%'
+          color: '#282c34'
           backgroundColor: 'inherit'
           outline: 'none'
           padding: '0.5em'
