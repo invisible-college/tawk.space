@@ -2,8 +2,8 @@
 bus('window').to_fetch = (key) ->
   # Hack: subtracting 10 from the viewport seems to avoid browser scrollbars
   _:
-    width: window.innerWidth - 10
-    height: window.innerHeight - 10
+    width: window.innerWidth - 50
+    height: window.innerHeight - 20
 
 window.onresize = () ->
   bus.dirty 'window'
