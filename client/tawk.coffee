@@ -71,7 +71,7 @@ window.statebus_ready.push ->
     connections = sb[server + '/connections']
     active_connections = sb['tawk/active_connections']
 
-    available_width = sb['tawk/width'] - 100 # Margin between groups and edge
+    available_width = sb['tawk/width'] - 30 # Margin between groups and edge
     available_height = sb['tawk/height'] - 100 # Some room for scratch space and margin with topbar
 
     # Calculate dimensions based on if everybody is in one group

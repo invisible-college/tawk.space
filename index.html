@@ -1,8 +1,9 @@
 <script type="statebus">
 bus('window').to_fetch = (key) ->
+  # Hack: subtracting 10 from the viewport seems to avoid browser scrollbars
   _:
-    width: window.innerWidth
-    height: window.innerHeight
+    width: window.innerWidth - 10
+    height: window.innerHeight - 10
 
 window.onresize = () ->
   bus.dirty 'window'
@@ -38,6 +39,7 @@ dom.TOPBAR = ->
     style:
       marginTop: '10px'
       marginLeft: '15px'
+      marginRight: '15px'
       height: "#{height}px"
     DIV {},
       IMG
@@ -52,10 +54,8 @@ dom.TOPBAR = ->
           window.location = 'https://tawk.space'
       DIV
         style:
-          paddingTop: '10px'
           fontSize: '3vm'
           float: 'right'
-          marginRight: '10px'
         ' My name: '
         SPAN
           title: 'click to change'
