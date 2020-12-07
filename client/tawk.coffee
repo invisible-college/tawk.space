@@ -71,7 +71,7 @@ window.statebus_ready.push ->
     connections = sb[server + '/connections']
     active_connections = sb['tawk/active_connections']
 
-    available_width = sb['tawk/width'] - 30 # Margin between groups and edge
+    available_width = sb['tawk/width'] - 100 # Margin between groups and edge
     available_height = sb['tawk/height'] - 100 # Some room for scratch space and margin with topbar
 
     # Calculate dimensions based on if everybody is in one group
@@ -82,7 +82,7 @@ window.statebus_ready.push ->
     estimated_width = available_width / size_if_all_in_one_group.width
     estimated_height = available_height / size_if_all_in_one_group.height
 
-    # 35 x 48 is the minimum
+    # 36 x 48 is the minimum
     person_height = Math.max(estimated_height, 36)
     person_width = Math.max(estimated_width, 48)
 
@@ -324,9 +324,12 @@ dom.PERSON = ->
           VIDEO
             autoPlay: 'true'
             style:
-              position: 'relative'
-              height: '100%'
+              position: 'absolute'
+              top: 0
+              left: 0
               width: '100%'
+              height: '100%'
+              objectFit: 'cover'
               zIndex: -1
               opacity: .9999 # http://stackoverflow.com/questions/5736503
               borderRadius: 1 # TODO: why is this necessary? https://github.com/invisible-college/tawk.space/issues/40
