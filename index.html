@@ -61,7 +61,6 @@ dom.TOPBAR = ->
           title: 'click to change'
           style:
             cursor: 'pointer'
-            fontWeight: 'bold'
           INPUT
             value: localUser.name
             className: 'light-gray'
@@ -69,6 +68,7 @@ dom.TOPBAR = ->
               color: '#282c34'
               border: 'transparent'
               borderRadius: '5px'
+              fontWeight: 'bold'
             onChange: (e) ->
               localUser.name = e.target.value
 
@@ -91,16 +91,14 @@ get_space = ->
   <script src='https://code.jquery.com/ui/1.11.4/jquery-ui.min.js'></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jqueryui-touch-punch/0.2.3/jquery.ui.touch-punch.min.js"></script>
 
-  <link href='https://maxcdn.bootstrapcdn.com/bootstrap/3.2.0/css/bootstrap.min.css' rel='stylesheet'>
-  <link href='https://maxcdn.bootstrapcdn.com/bootstrap/3.2.0/css/bootstrap-theme.min.css' rel='stylesheet'>
-  <script src='https://maxcdn.bootstrapcdn.com/bootstrap/3.2.0/js/bootstrap.min.js'></script>
-
   <script src='/hark.js'></script>
 
   <style>
     html, body {
       color: #abb2bf;
       background-color: #282c34;
+      font-family: "Helvetica Neue",Helvetica,Arial,sans-serif;
+      font-size: 14px;
     }
     .light-gray { background-color: #D9D9D9 }
     .dark-gray { background-color: #BFBFBF }

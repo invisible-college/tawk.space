@@ -265,6 +265,8 @@ dom.GROUP = ->
           outline: 'none'
           padding: '0.5em'
           borderRadius: '0 0 15px 15px'
+          # SYNCAREA otherwise defaults to fontFamily="monospace"
+          fontFamily: 'inherit'
 
 dom.GROUP.refresh = ->
   gid = @props.gid
