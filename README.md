@@ -14,10 +14,11 @@ Tawk is meant to be simple and flexible to use.
 * Each space can have **multiple chat groups**. Drag your video to create one or mouseover another group to hear what they're saying. This is an excellent way to create "breakout" groups.
 
 ## Obligatory thanks
-Tawk is mainly powered by two projects:
+Tawk was made possible through several helpful projects:
 
-* Statebus: https://github.com/invisible-college/statebus
-* Agora.io: https://agora.io
+* [Statebus](https://github.com/invisible-college/statebus), a realtime database
+* [Agora.io](https://agora.io), the video backend
+* [DesignEvo free logo designer](https://www.designevo.com/logo-maker/)
 
 ## Embed in your website
 
@@ -57,8 +58,6 @@ You must set up certs for https in a folder called `certs/` in the tawk.space re
 sudo ln -s /etc/letsencrypt/live/<your-domain>/fullchain.pem certs/certificate
 sudo ln -s /etc/letsencrypt/live/<your-domain>/privkey.pem certs/private-key
 ```
-
-Note: If you want the tawk.space logo, download it at https://tawk.space/favicon.ico and put it in the tawk.space folder as `favicon.ico`. This avoids having to put images in the repository.
 
 Finally, run it! Again, you might want to use `screen`.
 

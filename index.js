@@ -54,7 +54,8 @@ function run_server(bus) {
 
   const serve = (route, file) => bus.http.get(route, (r, res) => res.sendFile(__dirname + file))
 
-  serve('/janus.js', '/janus.js')
+  serve('/favicon.ico', '/favicon.ico')
+  serve('/logo.jpg', '/logo.jpg')
   serve('/hark.js',  '/node_modules/hark/hark.bundle.js')
   serve('/',         '/index.html')
   serve('/:id',      '/index.html')
@@ -70,4 +71,3 @@ if (require.main === module) {
   // Imported as a library (for testing)
   module.exports = add_server_state;
 }
-

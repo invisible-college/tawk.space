@@ -15,35 +15,49 @@ dom.BODY = ->
 
   sb['/connection'].name = localUser.name
 
+  topbar_height = 40
+
   DIV
     style:
       position: 'relative'
     CURSORS()
     STATE_DASH()
-    TOPBAR()
+    TOPBAR
+      height: topbar_height
     TAWK
       name: localUser.name
       space: get_space()
-      height: sb['window'].height - 20 # for topbar
+      height: sb['window'].height - topbar_height
       width: sb['window'].width
 
 dom.TOPBAR = ->
+  height = @props.height
   localUser = sb[ 'ls/localUser']
 
   DIV
-    id: 'topbar'
     style:
-      marginLeft: '35px'
+      marginTop: '10px'
+      marginLeft: '15px'
+      height: "#{height}px"
     DIV {},
+      IMG
+        src: '/logo.jpg'
+        alt: 'Tawk Space: The Virtual Salon'
+        title: 'Tawk Space: The Virtual Salon'
+        height: height
+        style:
+          cursor: 'pointer'
+          borderRadius: '5px'
+        onClick: ->
+          window.location = 'https://tawk.space'
       DIV
         style:
-          paddingTop: '20px'
+          paddingTop: '10px'
           fontSize: '3vm'
           float: 'right'
           marginRight: '10px'
         ' My name: '
         SPAN
-          id: 'username'
           title: 'click to change'
           style:
             cursor: 'pointer'
